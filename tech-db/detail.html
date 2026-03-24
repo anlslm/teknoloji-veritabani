@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kayıt Detayı</title>
+  <script src="app.js"></script>
+  <style id="sayfa-css"></style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="btn btn-ghost btn-sm" style="text-decoration:none">← Listeye Dön</a>
+  <span id="nav-id" class="badge" style="margin-left:8px"></span>
+  <div class="navbar-spacer"></div>
+  <button class="btn btn-ghost btn-sm" id="duzenle-btn" onclick="duzenleGit()">✏️ Düzenle</button>
+</nav>
+
+<main style="max-width:960px;margin:0 auto;padding:28px 24px" id="icerik">
+  <div class="empty-state">
+    <div class="empty-state-icon">⏳</div>
+    <div class="empty-state-text">Yükleniyor...</div>
+  </div>
+</main>
+
+<script>
+document.getElementById('sayfa-css').textContent = ortakCSS() + `
+  .detay-baslik {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .detay-ad {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .detay-meta {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+
+  .bilgi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .bilgi-kart {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+  }
+  .bilgi-etiket {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    margin-bottom: 5px;
+  }
+  .bilgi-deger {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .bilgi-alt {
+    font-size: 11px;
+    color: var(--text2);
+    margin-top: 3px;
+  }
+
+  /* TRL Görsel */
+  .trl-bolum { margin-bottom: 20px; }
+  .trl-satir {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .trl-satir-etiket {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text2);
+    width: 120px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+  }
+  .trl-kutular { display: flex; gap: 4px; }
+  .trl-kutu {
+    width: 40px;
+    height: 40px;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    border: 2px solid var(--border);
+    background: var(--bg3);
+    color: var(--text2);
+  }
+  .trl-kutu.aktif-bas  { background: #e9456030; border-color: #e94560; color: #e94560; }
+  .trl-kutu.aktif-ara  { background: #f7a44f20; border-color: #f7a44f; color: #f7a44f; }
+  .trl-kutu.aktif-hed  { background: #4fd97f30; border-color: #4fd97f; color: #4fd97f; }
+
+  /* İlişkili Kayıtlar */
+  .iliski-kart {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: background .12s, border-color .12s;
+    text-decoration: none;
+    color: inherit;
+  }
+  .iliski-kart:hover {
+    background: var(--bg2);
+    border-color: var(--accent);
+  }
+  .iliski-kart-id { font-family: monospace; font-size: 11px; color: var(--text2); }
+  .iliski-kart-ad { font-size: 14px; font-weight: 600; flex: 1; }
+  .iliski-ok { color: var(--text2); font-size: 16px; }
+
+  /* Bölüm başlığı */
+  .bolum-baslik {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .zaman-damgasi {
+    font-size: 11px;
+    color: var(--text2);
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+`;
+
+// ──────────────────────────────────────────────
+//  Sayfa
+// ──────────────────────────────────────────────
+let mevcutId = null;
+
+function duzenleGit() {
+  if (mevcutId) location.href = `form.html?id=${mevcutId}`;
+}
+
+function trlGorsel(bas, hed) {
+  let html = '<div class="trl-kutular">';
+  for (let i = 1; i <= 9; i++) {
+    let sinif = '';
+    if (i < bas)       sinif = '';
+    else if (i === bas) sinif = 'aktif-bas';
+    else if (i < hed)  sinif = 'aktif-ara';
+    else if (i === hed) sinif = 'aktif-hed';
+    html += `<div class="trl-kutu ${sinif}" title="TRL ${i}: ${TRL_ACIKLAMALARI[i]}">${i}</div>`;
+  }
+  return html + '</div>';
+}
+
+function sayfaRenderEt() {
+  const id = urlParam('id');
+  if (!id) { location.href = 'index.html'; return; }
+
+  const k = idIleGetir(id);
+  if (!k) {
+    document.getElementById('icerik').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">❌</div>
+        <div class="empty-state-text">Kayıt bulunamadı</div>
+        <div class="empty-state-sub">ID: ${id}</div>
+      </div>`;
+    return;
+  }
+
+  mevcutId = id;
+  document.title = `${k.id} — ${k.ad}`;
+  document.getElementById('nav-id').textContent = k.id;
+
+  // İlişkili kayıtları bul
+  const tumKayitlar = tumKayitlariGetir();
+  const iliskiliKayitlar = (k.iliskiler || [])
+    .map(lid => tumKayitlar.find(x => x.id === lid))
+    .filter(Boolean);
+
+  // TRL ilerleme hesapla
+  const ilerleme = Math.round(((k.baslangicTRL - 1) / 8) * 100);
+  const hedefIlerleme = Math.round(((k.hedeflenenTRL - 1) / 8) * 100);
+
+  document.getElementById('icerik').innerHTML = `
+    <!-- Başlık -->
+    <div class="detay-baslik">
+      <div>
+        <div class="detay-ad">${k.ad}</div>
+        <div class="detay-meta">
+          ${turEtiketi(k.tur)}
+          <span class="badge">${k.id}</span>
+          <span style="color:var(--text2);font-size:12px">Sorumlu: ${k.sorumlu || '—'}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bilgi Kartları -->
+    <div class="bilgi-grid">
+      <div class="bilgi-kart">
+        <div class="bilgi-etiket">Başlangıç TRL</div>
+        <div class="bilgi-deger" style="color:#e94560">TRL ${k.baslangicTRL}</div>
+        <div class="bilgi-alt">${TRL_ACIKLAMALARI[k.baslangicTRL]}</div>
+      </div>
+      <div class="bilgi-kart">
+        <div class="bilgi-etiket">Hedeflenen TRL</div>
+        <div class="bilgi-deger" style="color:#4fd97f">TRL ${k.hedeflenenTRL}</div>
+        <div class="bilgi-alt">${TRL_ACIKLAMALARI[k.hedeflenenTRL]}</div>
+      </div>
+      <div class="bilgi-kart">
+        <div class="bilgi-etiket">Başlangıç Tarihi</div>
+        <div class="bilgi-deger">${tarihFormatla(k.gelistirmeBaslangic)}</div>
+      </div>
+      <div class="bilgi-kart">
+        <div class="bilgi-etiket">Bitiş Tarihi</div>
+        <div class="bilgi-deger">${tarihFormatla(k.gelistirmeBitis)}</div>
+      </div>
+      <div class="bilgi-kart">
+        <div class="bilgi-etiket">Bütçe</div>
+        <div class="bilgi-deger">${butceFormatla(k.butce)}</div>
+      </div>
+      <div class="bilgi-kart">
+        <div class="bilgi-etiket">İşçilik</div>
+        <div class="bilgi-deger" style="font-size:14px">${k.iscilik || '—'}</div>
+      </div>
+    </div>
+
+    <!-- TRL Görseli -->
+    <div class="card trl-bolum" style="margin-bottom:20px">
+      <div class="bolum-baslik">TRL Seyri</div>
+      <div class="trl-satir">
+        <span class="trl-satir-etiket">Başlangıç (${k.baslangicTRL})</span>
+        ${trlGorsel(k.baslangicTRL, k.baslangicTRL)}
+      </div>
+      <div class="trl-satir">
+        <span class="trl-satir-etiket">Hedef (${k.hedeflenenTRL})</span>
+        ${trlGorsel(k.baslangicTRL, k.hedeflenenTRL)}
+      </div>
+      <div style="margin-top:12px;font-size:12px;color:var(--text2)">
+        <span style="color:#e94560">■</span> Başlangıç &nbsp;
+        <span style="color:#f7a44f">■</span> Geliştirilecek Aralık &nbsp;
+        <span style="color:#4fd97f">■</span> Hedef
+      </div>
+    </div>
+
+    <!-- İlişkili Kayıtlar -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="bolum-baslik">
+        İlişkili Kayıtlar
+        <span class="badge" style="margin-left:8px;vertical-align:middle">${iliskiliKayitlar.length}</span>
+      </div>
+      ${iliskiliKayitlar.length === 0
+        ? `<div style="color:var(--text2);font-size:13px;font-style:italic">Bu kayıda bağlı ilişki bulunmuyor.</div>`
+        : iliskiliKayitlar.map(ili => `
+          <a class="iliski-kart" href="detail.html?id=${ili.id}">
+            <span class="iliski-kart-id">${ili.id}</span>
+            ${turEtiketi(ili.tur)}
+            <span class="iliski-kart-ad">${ili.ad}</span>
+            <span style="color:var(--text2);font-size:12px">${ili.sorumlu || ''}</span>
+            <span class="iliski-ok">→</span>
+          </a>
+        `).join('')
+      }
+    </div>
+
+    <!-- Zaman Damgaları -->
+    <div class="zaman-damgasi">
+      <span>Oluşturulma: ${new Date(k.olusturmaTarihi).toLocaleString('tr-TR')}</span>
+      <span>Son Güncelleme: ${new Date(k.guncellenmeTarihi).toLocaleString('tr-TR')}</span>
+    </div>
+  `;
+}
+
+sayfaRenderEt();
+</script>
+</body>
+</html>

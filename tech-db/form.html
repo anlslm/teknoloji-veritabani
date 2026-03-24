@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teknoloji Tanımlama Formu</title>
+  <script src="app.js"></script>
+  <style id="sayfa-css"></style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="index.html" class="btn btn-ghost btn-sm" style="text-decoration:none">← Listeye Dön</a>
+  <span class="navbar-brand" style="margin-left:8px">Teknoloji <span>Tanımlama Formu</span></span>
+  <div class="navbar-spacer"></div>
+  <span id="kayit-id-badge" class="badge" style="display:none"></span>
+</nav>
+
+<main style="max-width:900px;margin:0 auto;padding:28px 24px">
+
+  <div id="hata-mesaji" class="alert alert-danger" style="display:none"></div>
+
+  <form id="ana-form" onsubmit="formKaydet(event)" novalidate>
+
+    <!-- BÖLÜM 1: TEMEL BİLGİLER -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="bolum-baslik">Temel Bilgiler</div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label required">Tür</label>
+          <select id="tur" class="form-control" required>
+            <option value="">Seçiniz...</option>
+            <option>Teknoloji</option>
+            <option>Alt Sistem</option>
+            <option>Sistem</option>
+            <option>Komponent</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label required">Ad</label>
+          <input type="text" id="ad" class="form-control" placeholder="Kayıt adını girin" maxlength="200" required>
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label class="form-label required">Sorumlu</label>
+          <input type="text" id="sorumlu" class="form-control" placeholder="Sorumlu kişi adı soyadı" required>
+        </div>
+      </div>
+    </div>
+
+    <!-- BÖLÜM 2: TAKVİM -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="bolum-baslik">Geliştirme Takvimi</div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label required">Geliştirme Başlangıç Tarihi</label>
+          <input type="date" id="baslangic-tarihi" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label required">Geliştirme Bitiş Tarihi</label>
+          <input type="date" id="bitis-tarihi" class="form-control" required>
+        </div>
+      </div>
+    </div>
+
+    <!-- BÖLÜM 3: TRL -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="bolum-baslik">Teknoloji Hazırlık Seviyesi (TRL)</div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label required">Başlangıç TRL</label>
+          <select id="baslangic-trl" class="form-control" required onchange="trlGuncelle()">
+            <option value="">Seçiniz...</option>
+          </select>
+          <p id="baslangic-trl-aciklama" class="trl-aciklama"></p>
+        </div>
+        <div class="form-group">
+          <label class="form-label required">Hedeflenen TRL</label>
+          <select id="hedeflenen-trl" class="form-control" required onchange="trlGuncelle()">
+            <option value="">Seçiniz...</option>
+          </select>
+          <p id="hedeflenen-trl-aciklama" class="trl-aciklama"></p>
+        </div>
+      </div>
+      <!-- TRL Görsel -->
+      <div id="trl-gorsel" class="trl-gorsel"></div>
+    </div>
+
+    <!-- BÖLÜM 4: MALİ -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="bolum-baslik">Mali Bilgiler</div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Bütçe (₺)</label>
+          <input type="number" id="butce" class="form-control" placeholder="0" min="0" step="any">
+        </div>
+        <div class="form-group">
+          <label class="form-label">İşçilik</label>
+          <input type="text" id="iscilik" class="form-control" placeholder="Örn: 3 Mühendis, 12 Ay">
+        </div>
+      </div>
+    </div>
+
+    <!-- BÖLÜM 5: İLİŞKİLENDİRME -->
+    <div class="card" style="margin-bottom:28px">
+      <div class="bolum-baslik">İlişkilendirme</div>
+      <p style="color:var(--text2);font-size:13px;margin-bottom:16px">
+        Bu kaydı veritabanındaki diğer kayıtlarla ilişkilendirin. Arama kutusunu kullanarak kayıt bulun ve ekleyin.
+      </p>
+
+      <!-- Arama -->
+      <div style="position:relative;margin-bottom:12px">
+        <input
+          type="text"
+          id="iliski-arama"
+          class="form-control"
+          placeholder="ID veya ad ile kayıt ara..."
+          autocomplete="off"
+          oninput="iliskiArama()"
+          onfocus="iliskiArama()"
+        >
+        <div id="iliski-oneri" class="iliski-oneri" style="display:none"></div>
+      </div>
+
+      <!-- Seçili İlişkiler -->
+      <div id="secili-iliskiler">
+        <div id="iliski-bos" style="color:var(--text2);font-size:13px;font-style:italic">
+          Henüz ilişki eklenmedi.
+        </div>
+      </div>
+    </div>
+
+    <!-- KAYDET -->
+    <div style="display:flex;gap:12px;justify-content:flex-end">
+      <button type="button" class="btn btn-ghost" onclick="location.href='index.html'">İptal</button>
+      <button type="submit" class="btn btn-success">
+        <span id="kaydet-ikon">✓</span>
+        <span id="kaydet-metin">Kaydet</span>
+      </button>
+    </div>
+
+  </form>
+</main>
+
+<script>
+document.getElementById('sayfa-css').textContent = ortakCSS() + `
+  .bolum-baslik {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    margin-bottom: 18px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .form-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 20px;
+  }
+  @media (max-width: 600px) { .form-grid-2 { grid-template-columns: 1fr; } }
+
+  .trl-aciklama {
+    font-size: 11px;
+    color: var(--text2);
+    margin-top: 5px;
+    min-height: 16px;
+  }
+  .trl-gorsel {
+    display: flex;
+    gap: 5px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+  .trl-kutu {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    border: 2px solid var(--border);
+    background: var(--bg3);
+    color: var(--text2);
+    transition: all .2s;
+  }
+  .trl-kutu.dolu      { background: #e9456025; border-color: #e94560; color: #e94560; }
+  .trl-kutu.hedef-ara { background: #4f8ef720; border-color: #4f8ef7; color: #4f8ef7; }
+  .trl-kutu.hedef     { background: #4fd97f25; border-color: #4fd97f; color: #4fd97f; }
+
+  /* İlişki öneri kutusu */
+  .iliski-oneri {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0; right: 0;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    z-index: 200;
+    max-height: 260px;
+    overflow-y: auto;
+  }
+  .oneri-satir {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background .1s;
+  }
+  .oneri-satir:last-child { border-bottom: none; }
+  .oneri-satir:hover { background: var(--bg3); }
+  .oneri-id { font-family: monospace; font-size: 11px; color: var(--text2); }
+  .oneri-ad { font-size: 13px; font-weight: 500; flex: 1; }
+
+  /* Seçili ilişkiler */
+  .iliski-kart {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+  }
+  .iliski-kart-id { font-family: monospace; font-size: 11px; color: var(--text2); }
+  .iliski-kart-ad { font-size: 13px; font-weight: 500; flex: 1; }
+  .iliski-kart-kaldir {
+    background: none;
+    border: none;
+    color: var(--text2);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0 4px;
+    line-height: 1;
+    transition: color .15s;
+  }
+  .iliski-kart-kaldir:hover { color: var(--danger); }
+`;
+
+// ──────────────────────────────────────────────
+//  TRL seçenekleri doldur
+// ──────────────────────────────────────────────
+function trlSecenekleriniDoldur() {
+  ['baslangic-trl', 'hedeflenen-trl'].forEach(id => {
+    const sel = document.getElementById(id);
+    const mevcut = sel.value;
+    // Mevcut seçenek dışındakileri koru
+    while (sel.options.length > 1) sel.remove(1);
+    for (let i = 1; i <= 9; i++) {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = `TRL ${i} — ${TRL_ACIKLAMALARI[i]}`;
+      sel.appendChild(opt);
+    }
+    if (mevcut) sel.value = mevcut;
+  });
+}
+
+function trlGuncelle() {
+  const bas = parseInt(document.getElementById('baslangic-trl').value, 10);
+  const hed = parseInt(document.getElementById('hedeflenen-trl').value, 10);
+
+  document.getElementById('baslangic-trl-aciklama').textContent =
+    bas ? `TRL ${bas}: ${TRL_ACIKLAMALARI[bas]}` : '';
+  document.getElementById('hedeflenen-trl-aciklama').textContent =
+    hed ? `TRL ${hed}: ${TRL_ACIKLAMALARI[hed]}` : '';
+
+  // Görsel güncelle
+  const gorsel = document.getElementById('trl-gorsel');
+  if (!bas && !hed) { gorsel.innerHTML = ''; return; }
+  let html = '';
+  for (let i = 1; i <= 9; i++) {
+    let sinif = '';
+    if (bas && hed) {
+      if (i < bas)       sinif = '';
+      else if (i === bas) sinif = 'dolu';
+      else if (i < hed)  sinif = 'hedef-ara';
+      else if (i === hed) sinif = 'hedef';
+    } else if (bas && i <= bas) sinif = 'dolu';
+    else if (hed && i <= hed) sinif = 'hedef-ara';
+    html += `<div class="trl-kutu ${sinif}">${i}</div>`;
+  }
+  gorsel.innerHTML = html;
+}
+
+// ──────────────────────────────────────────────
+//  İlişkilendirme
+// ──────────────────────────────────────────────
+let seciliIliskiler = []; // ID listesi
+let duzenlemeModu = false;
+let duzenleId = null;
+
+function iliskiArama() {
+  const aramaMetni = document.getElementById('iliski-arama').value.toLowerCase().trim();
+  const oneriDiv   = document.getElementById('iliski-oneri');
+  const tumKayitlar = tumKayitlariGetir();
+
+  // Mevcut kayıt ve seçili olanları çıkar
+  const filtrelenenler = tumKayitlar.filter(k => {
+    if (duzenleId && k.id === duzenleId) return false; // kendisi
+    if (seciliIliskiler.includes(k.id)) return false;   // zaten seçili
+    if (!aramaMetni) return true;
+    return k.id.toLowerCase().includes(aramaMetni) || k.ad.toLowerCase().includes(aramaMetni);
+  });
+
+  if (filtrelenenler.length === 0) {
+    oneriDiv.innerHTML = '<div style="padding:12px 14px;color:var(--text2);font-size:13px">Kayıt bulunamadı</div>';
+    oneriDiv.style.display = 'block';
+    return;
+  }
+
+  oneriDiv.innerHTML = filtrelenenler.slice(0, 15).map(k => `
+    <div class="oneri-satir" onclick="iliskiEkle('${k.id}')">
+      <span class="oneri-id">${k.id}</span>
+      ${turEtiketi(k.tur)}
+      <span class="oneri-ad">${k.ad}</span>
+      <span style="color:var(--text2);font-size:11px">${k.sorumlu || ''}</span>
+    </div>
+  `).join('');
+  oneriDiv.style.display = 'block';
+}
+
+function iliskiEkle(id) {
+  if (seciliIliskiler.includes(id)) return;
+  seciliIliskiler.push(id);
+  document.getElementById('iliski-arama').value = '';
+  document.getElementById('iliski-oneri').style.display = 'none';
+  seciliIliskileriRenderEt();
+}
+
+function iliskiKaldir(id) {
+  seciliIliskiler = seciliIliskiler.filter(x => x !== id);
+  seciliIliskileriRenderEt();
+}
+
+function seciliIliskileriRenderEt() {
+  const kap = document.getElementById('secili-iliskiler');
+  const bos = document.getElementById('iliski-bos');
+
+  if (seciliIliskiler.length === 0) {
+    kap.innerHTML = '<div id="iliski-bos" style="color:var(--text2);font-size:13px;font-style:italic">Henüz ilişki eklenmedi.</div>';
+    return;
+  }
+
+  const tumKayitlar = tumKayitlariGetir();
+  let html = '';
+  seciliIliskiler.forEach(id => {
+    const k = tumKayitlar.find(x => x.id === id);
+    if (!k) return;
+    html += `<div class="iliski-kart">
+      <span class="iliski-kart-id">${k.id}</span>
+      ${turEtiketi(k.tur)}
+      <span class="iliski-kart-ad">${k.ad}</span>
+      <span style="color:var(--text2);font-size:12px">${k.sorumlu || ''}</span>
+      <button class="iliski-kart-kaldir" onclick="iliskiKaldir('${k.id}')" title="Kaldır">×</button>
+    </div>`;
+  });
+  kap.innerHTML = html;
+}
+
+// Önerileri dışarı tıklanınca kapat
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#iliski-arama') && !e.target.closest('#iliski-oneri')) {
+    document.getElementById('iliski-oneri').style.display = 'none';
+  }
+});
+
+// ──────────────────────────────────────────────
+//  Validasyon
+// ──────────────────────────────────────────────
+function formValidasyonu() {
+  const tur  = document.getElementById('tur').value;
+  const ad   = document.getElementById('ad').value.trim();
+  const sor  = document.getElementById('sorumlu').value.trim();
+  const bas  = document.getElementById('baslangic-tarihi').value;
+  const bit  = document.getElementById('bitis-tarihi').value;
+  const btrl = parseInt(document.getElementById('baslangic-trl').value, 10);
+  const htrl = parseInt(document.getElementById('hedeflenen-trl').value, 10);
+
+  if (!tur)  return 'Tür seçimi zorunludur.';
+  if (!ad)   return 'Ad alanı zorunludur.';
+  if (!sor)  return 'Sorumlu alanı zorunludur.';
+  if (!bas)  return 'Geliştirme başlangıç tarihi zorunludur.';
+  if (!bit)  return 'Geliştirme bitiş tarihi zorunludur.';
+  if (bas > bit) return 'Bitiş tarihi başlangıç tarihinden önce olamaz.';
+  if (!btrl) return 'Başlangıç TRL seçimi zorunludur.';
+  if (!htrl) return 'Hedeflenen TRL seçimi zorunludur.';
+  if (htrl < btrl) return 'Hedeflenen TRL, başlangıç TRL\'den küçük olamaz.';
+  return null;
+}
+
+// ──────────────────────────────────────────────
+//  Kaydet
+// ──────────────────────────────────────────────
+function formKaydet(e) {
+  e.preventDefault();
+  const hata = formValidasyonu();
+  const hataDiv = document.getElementById('hata-mesaji');
+
+  if (hata) {
+    hataDiv.textContent = hata;
+    hataDiv.style.display = 'block';
+    hataDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  hataDiv.style.display = 'none';
+
+  const veri = {
+    tur:                 document.getElementById('tur').value,
+    ad:                  document.getElementById('ad').value,
+    sorumlu:             document.getElementById('sorumlu').value,
+    gelistirmeBaslangic: document.getElementById('baslangic-tarihi').value,
+    gelistirmeBitis:     document.getElementById('bitis-tarihi').value,
+    baslangicTRL:        document.getElementById('baslangic-trl').value,
+    hedeflenenTRL:       document.getElementById('hedeflenen-trl').value,
+    butce:               document.getElementById('butce').value,
+    iscilik:             document.getElementById('iscilik').value,
+    iliskiler:           [...seciliIliskiler]
+  };
+
+  if (duzenlemeModu && duzenleId) {
+    kayitGuncelle(duzenleId, veri);
+  } else {
+    kayitEkle(veri);
+  }
+
+  location.href = 'index.html';
+}
+
+// ──────────────────────────────────────────────
+//  Sayfa yüklenince: düzenleme mi? yeni mi?
+// ──────────────────────────────────────────────
+function sayfaBaslat() {
+  trlSecenekleriniDoldur();
+
+  const id = urlParam('id');
+  if (id) {
+    // DÜZENLEME MODU
+    const kayit = idIleGetir(id);
+    if (!kayit) {
+      alert('Kayıt bulunamadı.');
+      location.href = 'index.html';
+      return;
+    }
+    duzenlemeModu = true;
+    duzenleId     = id;
+
+    document.title = `Düzenle: ${kayit.id}`;
+    const badge = document.getElementById('kayit-id-badge');
+    badge.textContent = kayit.id;
+    badge.style.display = 'inline-block';
+    document.getElementById('kaydet-metin').textContent = 'Güncelle';
+
+    // Formu doldur
+    document.getElementById('tur').value             = kayit.tur;
+    document.getElementById('ad').value              = kayit.ad;
+    document.getElementById('sorumlu').value         = kayit.sorumlu;
+    document.getElementById('baslangic-tarihi').value = kayit.gelistirmeBaslangic;
+    document.getElementById('bitis-tarihi').value    = kayit.gelistirmeBitis;
+    document.getElementById('baslangic-trl').value   = kayit.baslangicTRL;
+    document.getElementById('hedeflenen-trl').value  = kayit.hedeflenenTRL;
+    document.getElementById('butce').value           = kayit.butce || '';
+    document.getElementById('iscilik').value         = kayit.iscilik || '';
+
+    // İlişkiler
+    seciliIliskiler = [...(kayit.iliskiler || [])];
+    seciliIliskileriRenderEt();
+    trlGuncelle();
+  }
+}
+
+sayfaBaslat();
+</script>
+</body>
+</html>

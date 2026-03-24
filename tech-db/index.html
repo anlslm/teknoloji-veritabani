@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teknoloji Veritabanı</title>
+  <script src="app.js"></script>
+  <style id="sayfa-css"></style>
+</head>
+<body>
+
+<nav class="navbar">
+  <span class="navbar-brand">Teknoloji <span>Veritabanı</span></span>
+  <div class="navbar-spacer"></div>
+  <button class="btn btn-primary" onclick="location.href='form.html'">
+    + Yeni Kayıt
+  </button>
+</nav>
+
+<main style="max-width:1200px;margin:0 auto;padding:28px 24px">
+
+  <!-- İstatistik Kartları -->
+  <div id="istatistik-alani" class="istatistik-grid"></div>
+
+  <!-- Filtre Çubuğu -->
+  <div class="card" style="margin-bottom:20px;padding:14px 20px">
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <input type="text" id="arama" class="form-control" placeholder="Ad veya ID ile ara..." style="max-width:280px">
+      <select id="tur-filtre" class="form-control" style="max-width:180px">
+        <option value="">Tüm Türler</option>
+        <option>Teknoloji</option>
+        <option>Alt Sistem</option>
+        <option>Sistem</option>
+        <option>Komponent</option>
+      </select>
+      <select id="siralama" class="form-control" style="max-width:200px">
+        <option value="id-asc">ID (Artan)</option>
+        <option value="id-desc">ID (Azalan)</option>
+        <option value="ad-asc">Ad (A→Z)</option>
+        <option value="ad-desc">Ad (Z→A)</option>
+        <option value="trl-asc">Başlangıç TRL (Artan)</option>
+        <option value="trl-desc">Başlangıç TRL (Azalan)</option>
+      </select>
+      <span id="sonuc-sayisi" style="color:var(--text2);font-size:13px;margin-left:auto"></span>
+    </div>
+  </div>
+
+  <!-- Tablo -->
+  <div class="card" style="padding:0;overflow:hidden">
+    <div style="overflow-x:auto">
+      <table id="kayit-tablo">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>TÜR</th>
+            <th>AD</th>
+            <th>SORUMLU</th>
+            <th>TRL</th>
+            <th>BÜTÇE</th>
+            <th>BİTİŞ TARİHİ</th>
+            <th>İLİŞKİLER</th>
+            <th style="text-align:center">İŞLEMLER</th>
+          </tr>
+        </thead>
+        <tbody id="tablo-govde"></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- Silme Onay Modalı -->
+<div id="modal-overlay" class="modal-overlay" style="display:none" onclick="modalKapat()">
+  <div class="modal-kutu" onclick="event.stopPropagation()">
+    <div class="modal-baslik">Kaydı Sil</div>
+    <p id="modal-mesaj" style="color:var(--text2);margin-bottom:20px;font-size:14px"></p>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="modalKapat()">İptal</button>
+      <button class="btn btn-danger" id="modal-onay-btn">Sil</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// CSS enjekte
+document.getElementById('sayfa-css').textContent = ortakCSS() + `
+  .istatistik-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .istat-kart {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .istat-sayi { font-size: 28px; font-weight: 700; }
+  .istat-etiket { font-size: 11px; color: var(--text2); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    background: var(--bg3);
+    padding: 11px 16px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background .12s;
+    cursor: pointer;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--bg3); }
+  tbody td { padding: 12px 16px; font-size: 13px; vertical-align: middle; }
+  .td-id { font-family: monospace; font-size: 12px; color: var(--text2); font-weight: 600; }
+  .td-ad { font-weight: 500; max-width: 220px; }
+  .trl-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .trl-ok { color: var(--text2); font-size: 10px; }
+  .islem-butonlar { display: flex; gap: 6px; justify-content: center; }
+
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.6);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 999;
+  }
+  .modal-kutu {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px;
+    width: 380px;
+    max-width: 90vw;
+  }
+  .modal-baslik { font-size: 16px; font-weight: 700; margin-bottom: 10px; }
+`;
+
+// ──────────────────────────────────────────────
+//  Sayfa Mantığı
+// ──────────────────────────────────────────────
+
+let silinecekId = null;
+
+function istatistikleriRenderEt(kayitlar) {
+  const toplam = kayitlar.length;
+  const turSayilari = {};
+  TURLER.forEach(t => { turSayilari[t] = 0; });
+  kayitlar.forEach(k => { if (turSayilari[k.tur] !== undefined) turSayilari[k.tur]++; });
+
+  const renkler = { 'Teknoloji': '#4f8ef7', 'Alt Sistem': '#f7a44f', 'Sistem': '#4fd97f', 'Komponent': '#c84ff7' };
+
+  let html = `<div class="istat-kart">
+    <span class="istat-sayi">${toplam}</span>
+    <span class="istat-etiket">Toplam Kayıt</span>
+  </div>`;
+
+  TURLER.forEach(tur => {
+    const r = renkler[tur] || 'var(--accent)';
+    html += `<div class="istat-kart" style="border-left: 3px solid ${r}">
+      <span class="istat-sayi" style="color:${r}">${turSayilari[tur]}</span>
+      <span class="istat-etiket">${tur}</span>
+    </div>`;
+  });
+
+  document.getElementById('istatistik-alani').innerHTML = html;
+}
+
+function tabloRenderEt() {
+  const arama   = document.getElementById('arama').value.toLowerCase();
+  const turF    = document.getElementById('tur-filtre').value;
+  const siraF   = document.getElementById('siralama').value;
+  let kayitlar  = tumKayitlariGetir();
+
+  istatistikleriRenderEt(kayitlar);
+
+  // Filtrele
+  if (turF) kayitlar = kayitlar.filter(k => k.tur === turF);
+  if (arama) kayitlar = kayitlar.filter(k =>
+    k.ad.toLowerCase().includes(arama) || k.id.toLowerCase().includes(arama)
+  );
+
+  // Sırala
+  const [alan, yon] = siraF.split('-');
+  kayitlar.sort((a, b) => {
+    let va, vb;
+    if (alan === 'id')  { va = a.id; vb = b.id; }
+    if (alan === 'ad')  { va = a.ad.toLowerCase(); vb = b.ad.toLowerCase(); }
+    if (alan === 'trl') { va = a.baslangicTRL; vb = b.baslangicTRL; }
+    if (va < vb) return yon === 'asc' ? -1 : 1;
+    if (va > vb) return yon === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  document.getElementById('sonuc-sayisi').textContent = `${kayitlar.length} kayıt`;
+
+  const tbody = document.getElementById('tablo-govde');
+  if (kayitlar.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9">
+      <div class="empty-state">
+        <div class="empty-state-icon">🗄️</div>
+        <div class="empty-state-text">Kayıt bulunamadı</div>
+        <div class="empty-state-sub">Filtre kriterlerini değiştirin veya yeni kayıt ekleyin.</div>
+      </div>
+    </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = kayitlar.map(k => {
+    const trlRenk = k.baslangicTRL <= 3 ? '#e94560' : k.baslangicTRL <= 6 ? '#f7a44f' : '#4fd97f';
+    const iliskiSayisi = (k.iliskiler || []).length;
+    return `<tr onclick="location.href='detail.html?id=${k.id}'" title="Detayı görüntüle">
+      <td class="td-id">${k.id}</td>
+      <td>${turEtiketi(k.tur)}</td>
+      <td class="td-ad">${k.ad}</td>
+      <td>${k.sorumlu || '—'}</td>
+      <td>
+        <span class="trl-badge">
+          <span style="color:${trlRenk};font-size:15px;font-weight:700">${k.baslangicTRL}</span>
+          <span class="trl-ok">→</span>
+          <span style="color:#4f8ef7;font-size:15px;font-weight:700">${k.hedeflenenTRL}</span>
+        </span>
+      </td>
+      <td>${butceFormatla(k.butce)}</td>
+      <td>${tarihFormatla(k.gelistirmeBitis)}</td>
+      <td>
+        ${iliskiSayisi > 0
+          ? `<span class="badge">${iliskiSayisi} bağlantı</span>`
+          : `<span style="color:var(--text2)">—</span>`}
+      </td>
+      <td onclick="event.stopPropagation()">
+        <div class="islem-butonlar">
+          <button class="btn btn-ghost btn-sm" onclick="location.href='detail.html?id=${k.id}'">Detay</button>
+          <button class="btn btn-ghost btn-sm" onclick="location.href='form.html?id=${k.id}'">Düzenle</button>
+          <button class="btn btn-danger btn-sm" onclick="silOnay('${k.id}','${k.ad.replace(/'/g,"\\'")}')">Sil</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function silOnay(id, ad) {
+  silinecekId = id;
+  document.getElementById('modal-mesaj').textContent =
+    `"${ad}" (${id}) kaydını kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`;
+  document.getElementById('modal-onay-btn').onclick = () => {
+    kayitSil(id);
+    modalKapat();
+    tabloRenderEt();
+  };
+  document.getElementById('modal-overlay').style.display = 'flex';
+}
+
+function modalKapat() {
+  document.getElementById('modal-overlay').style.display = 'none';
+  silinecekId = null;
+}
+
+// Olay dinleyicileri
+document.getElementById('arama').addEventListener('input', tabloRenderEt);
+document.getElementById('tur-filtre').addEventListener('change', tabloRenderEt);
+document.getElementById('siralama').addEventListener('change', tabloRenderEt);
+
+// İlk yükleme
+tabloRenderEt();
+</script>
+</body>
+</html>
