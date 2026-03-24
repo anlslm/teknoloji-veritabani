@@ -11,6 +11,10 @@
 
 <nav class="navbar">
   <span class="navbar-brand">Teknoloji <span>Veritabanı</span></span>
+  <div class="tab-bar-nav">
+    <a href="index.html"   class="tab-link active">📋 Kayıt Listesi</a>
+    <a href="roadmap.html" class="tab-link">🗺️ Yol Haritası</a>
+  </div>
   <div class="navbar-spacer"></div>
   <button class="btn btn-primary" onclick="location.href='form.html'">
     + Yeni Kayıt
@@ -84,6 +88,18 @@
 <script>
 // CSS enjekte
 document.getElementById('sayfa-css').textContent = ortakCSS() + `
+  .tab-bar-nav {
+    display: flex; gap: 3px; margin-left: 20px;
+  }
+  .tab-link {
+    padding: 6px 14px; border-radius: 8px;
+    font-size: 13px; font-weight: 500;
+    color: var(--text2); text-decoration: none;
+    transition: background .15s, color .15s;
+  }
+  .tab-link:hover { background: var(--bg3); color: var(--text); text-decoration: none; }
+  .tab-link.active { background: var(--accent); color: #fff; }
+
   .istatistik-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));

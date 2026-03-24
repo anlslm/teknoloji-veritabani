@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teknoloji Yol Haritası</title>
+  <script src="app.js"></script>
+  <style id="sayfa-css"></style>
+</head>
+<body>
+
+<nav class="navbar">
+  <span class="navbar-brand">Teknoloji <span>Veritabanı</span></span>
+  <div class="tab-bar-nav">
+    <a href="index.html"   class="tab-link">📋 Kayıt Listesi</a>
+    <a href="roadmap.html" class="tab-link active">🗺️ Yol Haritası</a>
+  </div>
+  <div class="navbar-spacer"></div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <span style="color:var(--text2);font-size:12px;font-weight:500">Ölçek:</span>
+    <select id="zoom-sel" class="form-control"
+            style="width:150px;padding:5px 8px;font-size:12px"
+            onchange="yenidenRenderEt()">
+      <option value="50">Geniş (Yıllık)</option>
+      <option value="90" selected>Normal (Aylık)</option>
+      <option value="140">Yakın (Detaylı)</option>
+    </select>
+    <button class="btn btn-ghost btn-sm" onclick="bugunKaydır()">◎ Bugün</button>
+    <button class="btn btn-primary btn-sm" onclick="location.href='form.html'">+ Yeni Kayıt</button>
+  </div>
+</nav>
+
+<!-- Boş durum -->
+<div id="bos-durum" style="display:none;height:calc(100vh - 56px);align-items:center;justify-content:center">
+  <div class="empty-state">
+    <div class="empty-state-icon">🗺️</div>
+    <div class="empty-state-text">Yol haritasında gösterilecek kayıt yok</div>
+    <div class="empty-state-sub">Geliştirme tarihleri girilmiş kayıtlar burada görünür.</div>
+    <button class="btn btn-primary" style="margin-top:16px" onclick="location.href='form.html'">
+      + Yeni Kayıt Ekle
+    </button>
+  </div>
+</div>
+
+<!-- Ana roadmap düzeni -->
+<div id="roadmap-main" style="display:flex;height:calc(100vh - 56px);overflow:hidden">
+
+  <!-- Sol panel: swimlane etiketleri -->
+  <div id="left-panel">
+    <div id="lp-spacer"></div>
+    <div id="lp-lanes"></div>
+  </div>
+
+  <!-- Sağ panel: kaydırılabilir alan -->
+  <div id="right-panel" style="flex:1;overflow:auto;position:relative">
+    <div id="tl-header" style="position:sticky;top:0;z-index:9"></div>
+    <div id="content-area" style="position:relative">
+      <svg id="conn-svg" style="position:absolute;top:0;left:0;pointer-events:none;overflow:visible"></svg>
+      <div id="bars-layer" style="position:absolute;top:0;left:0;width:100%;height:100%"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Tooltip -->
+<div id="tooltip" style="
+  position:fixed;pointer-events:none;z-index:9999;display:none;
+  background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+  padding:12px 16px;max-width:300px;box-shadow:0 8px 28px rgba(0,0,0,.55);
+  font-size:13px;line-height:1.65;
+"></div>
+
+<script>
+// ────────────────────────────────────────────────────
+//  CSS
+// ────────────────────────────────────────────────────
+document.getElementById('sayfa-css').textContent = ortakCSS() + `
+  .tab-bar-nav {
+    display: flex; gap: 3px; margin-left: 20px;
+  }
+  .tab-link {
+    padding: 6px 14px; border-radius: 8px;
+    font-size: 13px; font-weight: 500;
+    color: var(--text2); text-decoration: none;
+    transition: background .15s, color .15s;
+  }
+  .tab-link:hover { background: var(--bg3); color: var(--text); text-decoration: none; }
+  .tab-link.active { background: var(--accent); color: #fff; }
+
+  /* Sol panel */
+  #left-panel {
+    width: 160px; flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    background: var(--bg); z-index: 10;
+  }
+  #lp-spacer {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+  }
+  .swim-label {
+    display: flex; align-items: center;
+    padding: 0 16px;
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .7px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+  }
+
+  /* Timeline başlığı */
+  #tl-header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    user-select: none;
+  }
+  .tl-year-row  { display: flex; border-bottom: 1px solid var(--border); }
+  .tl-month-row { display: flex; }
+  .tl-year-cell {
+    flex-shrink: 0; height: 22px;
+    display: flex; align-items: center; padding-left: 8px;
+    font-size: 10px; font-weight: 800; color: var(--text2);
+    text-transform: uppercase; letter-spacing: .5px;
+    background: var(--bg3); border-right: 1px solid var(--border);
+  }
+  .tl-month-cell {
+    flex-shrink: 0; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 500; color: var(--text2);
+    border-right: 1px solid rgba(255,255,255,.05);
+  }
+  .tl-month-cell.current { color: var(--accent); font-weight: 700; background: rgba(79,142,247,.08); }
+
+  /* Swimlane & grid */
+  .swim-bg {
+    position: absolute; left: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .swim-bg.alt { background: rgba(255,255,255,.012); }
+  .grid-ln {
+    position: absolute; top: 0;
+    width: 1px; background: rgba(255,255,255,.06);
+  }
+  .grid-ln.yr  { background: rgba(255,255,255,.14); }
+  .grid-ln.now {
+    background: #e94560; opacity: .9; width: 2px; z-index: 4;
+  }
+  .now-label {
+    position: absolute; top: -20px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 9px; font-weight: 800; color: #e94560;
+    white-space: nowrap; background: var(--bg2);
+    padding: 1px 5px; border-radius: 3px;
+  }
+
+  /* Barlar */
+  .rm-bar {
+    position: absolute; border-radius: 7px;
+    border: 1.5px solid; cursor: pointer;
+    display: flex; align-items: center;
+    padding: 0 8px; gap: 6px;
+    overflow: hidden;
+    transition: filter .15s, transform .1s, box-shadow .15s;
+    box-shadow: 0 2px 8px rgba(0,0,0,.35);
+  }
+  .rm-bar:hover {
+    filter: brightness(1.25);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0,0,0,.45);
+    z-index: 20 !important;
+  }
+  .rm-bar-label {
+    font-size: 12px; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    flex: 1; color: #fff;
+  }
+  .rm-bar-trl {
+    flex-shrink: 0;
+    font-size: 10px; font-weight: 700;
+    background: rgba(0,0,0,.35); padding: 1px 5px;
+    border-radius: 4px; color: rgba(255,255,255,.9);
+  }
+  .rm-flag {
+    flex-shrink: 0; font-size: 12px;
+    animation: flagpulse 2s ease-in-out infinite;
+  }
+  @keyframes flagpulse {
+    0%,100% { opacity: 1; } 50% { opacity: .3; }
+  }
+
+  /* Bağlantı seçim hali */
+  .rm-bar.highlighted { filter: brightness(1.4) !important; z-index: 25 !important; }
+  .rm-bar.dimmed { filter: brightness(.45) !important; }
+
+  /* Gecikme uyarı bandı */
+  .delay-stripe {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent, transparent 4px,
+      rgba(233,69,96,.15) 4px, rgba(233,69,96,.15) 8px
+    );
+    border-radius: 6px; pointer-events: none;
+  }
+`;
+
+// ────────────────────────────────────────────────────
+//  Sabitler
+// ────────────────────────────────────────────────────
+const TUR_SIRASI  = ['Sistem', 'Alt Sistem', 'Teknoloji', 'Komponent'];
+const TUR_RENKLER = {
+  'Sistem':     '#4fd97f',
+  'Alt Sistem': '#f7a44f',
+  'Teknoloji':  '#4f8ef7',
+  'Komponent':  '#c84ff7',
+};
+const TR_AYLAR = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+const TL_H     = 52;   // timeline başlığı yüksekliği
+const ROW_H    = 50;   // swimlane'deki satır yüksekliği
+const SWIM_PAD = 14;   // swimlane dikey iç boşluk
+
+let MONTH_W  = 90;     // zoom ile değişir
+let baseYear, baseMonth; // hesaplama referansı
+
+// ────────────────────────────────────────────────────
+//  Yardımcı: piksel dönüşümü
+// ────────────────────────────────────────────────────
+function dateToX(dateStr) {
+  if (!dateStr) return 0;
+  const d = new Date(dateStr + 'T00:00:00');
+  const totalM = (d.getFullYear() - baseYear) * 12 + (d.getMonth() - baseMonth);
+  const dayFrac = (d.getDate() - 1) / 30;
+  return Math.round((totalM + dayFrac) * MONTH_W);
+}
+
+function todayX() {
+  return dateToX(new Date().toISOString().slice(0, 10));
+}
+
+// ────────────────────────────────────────────────────
+//  Kırmızı Bayrak: bağlı bileşen sistem gecikmesi
+// ────────────────────────────────────────────────────
+function hesaplaKirmiziBayraklar(kayitlar) {
+  const flags  = {};   // id → açıklama
+  const lookup = {};
+  kayitlar.forEach(k => { lookup[k.id] = k; });
+
+  kayitlar.forEach(r => {
+    if (!r.gelistirmeBitis) return;
+    const rBitis = new Date(r.gelistirmeBitis + 'T00:00:00');
+
+    (r.iliskiler || []).forEach(lid => {
+      const diger = lookup[lid];
+      if (!diger || !diger.gelistirmeBitis) return;
+      const digerBitis = new Date(diger.gelistirmeBitis + 'T00:00:00');
+
+      if (digerBitis > rBitis) {
+        // Bağlı öğe bu öğeden daha geç bitiyor → sistem gecikme riski
+        if (!flags[r.id]) {
+          flags[r.id] =
+            `"${diger.ad}" (${diger.id}) bileşeninin bitiş tarihi ` +
+            `${tarihFormatla(diger.gelistirmeBitis)}, bu öğenin bitiş tarihini ` +
+            `(${tarihFormatla(r.gelistirmeBitis)}) aşıyor — sistem düzeyinde gecikme riski.`;
+        }
+      }
+    });
+  });
+  return flags;
+}
+
+// ────────────────────────────────────────────────────
+//  Render
+// ────────────────────────────────────────────────────
+function yenidenRenderEt() {
+  MONTH_W = parseInt(document.getElementById('zoom-sel').value, 10);
+  renderRoadmap();
+}
+
+function renderRoadmap() {
+  const tumKayitlar = tumKayitlariGetir();
+  const kayitlar    = tumKayitlar.filter(k => k.gelistirmeBaslangic && k.gelistirmeBitis);
+
+  if (kayitlar.length === 0) {
+    document.getElementById('roadmap-main').style.display = 'none';
+    document.getElementById('bos-durum').style.display   = 'flex';
+    return;
+  }
+  document.getElementById('roadmap-main').style.display = 'flex';
+  document.getElementById('bos-durum').style.display    = 'none';
+
+  // ── 1. Tarih aralığı ──────────────────────────────
+  const minD = new Date(Math.min(...kayitlar.map(k => new Date(k.gelistirmeBaslangic + 'T00:00:00'))));
+  const maxD = new Date(Math.max(...kayitlar.map(k => new Date(k.gelistirmeBitis    + 'T00:00:00'))));
+
+  // 1 ay padding her iki uca
+  const rangeStart = new Date(minD.getFullYear(), minD.getMonth() - 1, 1);
+  const rangeEnd   = new Date(maxD.getFullYear(), maxD.getMonth() + 2, 1);
+
+  baseYear  = rangeStart.getFullYear();
+  baseMonth = rangeStart.getMonth();
+
+  const totalMonths =
+    (rangeEnd.getFullYear() - baseYear) * 12 +
+    (rangeEnd.getMonth()    - baseMonth) + 1;
+
+  const totalW = totalMonths * MONTH_W;
+
+  // ── 2. Gruplama & swimlane yükseklikleri ──────────
+  const grouped  = {};
+  TUR_SIRASI.forEach(t => { grouped[t] = kayitlar.filter(k => k.tur === t); });
+
+  const swimTops = {}, swimHeights = {};
+  let cumY = 0;
+  TUR_SIRASI.forEach(tur => {
+    swimTops[tur]    = cumY;
+    const satirSayisi = Math.max(grouped[tur].length, 1);
+    swimHeights[tur]  = satirSayisi * ROW_H + 2 * SWIM_PAD;
+    cumY += swimHeights[tur];
+  });
+  const totalH = cumY;
+
+  // ── 3. Bar pozisyonları ───────────────────────────
+  const barPos = {};   // id → { x, y, w, h, cx, cy }
+  TUR_SIRASI.forEach(tur => {
+    grouped[tur].forEach((k, i) => {
+      const x  = dateToX(k.gelistirmeBaslangic);
+      const ex = dateToX(k.gelistirmeBitis) + MONTH_W;
+      const w  = Math.max(ex - x, 24);
+      const y  = swimTops[tur] + SWIM_PAD + i * ROW_H;
+      const h  = ROW_H - 8;
+      barPos[k.id] = { x, y, w, h, cx: x + w / 2, cy: y + h / 2 };
+    });
+  });
+
+  // ── 4. Kırmızı bayraklar ──────────────────────────
+  const bayraklar = hesaplaKirmiziBayraklar(kayitlar);
+
+  // ── 5. Render adımları ────────────────────────────
+  renderLeftPanel(swimTops, swimHeights);
+  renderTimeline(totalMonths, totalW);
+  renderContentArea(totalW, totalH, totalMonths, swimTops, swimHeights);
+  renderBars(kayitlar, barPos, bayraklar);
+  renderConnections(kayitlar, barPos);
+}
+
+// ────────────────────────────────────────────────────
+function renderLeftPanel(swimTops, swimHeights) {
+  document.getElementById('lp-spacer').style.height = TL_H + 'px';
+  document.getElementById('lp-lanes').innerHTML =
+    TUR_SIRASI.map(tur => {
+      const renk = TUR_RENKLER[tur] || '#888';
+      return `<div class="swim-label"
+        style="height:${swimHeights[tur]}px;border-left:3px solid ${renk};color:${renk}">
+        ${tur}
+      </div>`;
+    }).join('');
+}
+
+// ────────────────────────────────────────────────────
+function renderTimeline(totalMonths, totalW) {
+  const hdr = document.getElementById('tl-header');
+  hdr.style.height = TL_H + 'px';
+
+  // Yıl satırı
+  const years = [];
+  let prevYr = null;
+  for (let i = 0; i < totalMonths; i++) {
+    const totalM = baseMonth + i;
+    const yr = baseYear + Math.floor(totalM / 12);
+    if (yr !== prevYr) { years.push({ year: yr, count: 0 }); prevYr = yr; }
+    years[years.length - 1].count++;
+  }
+  const yrRow = years.map(y =>
+    `<div class="tl-year-cell" style="width:${y.count * MONTH_W}px">${y.year}</div>`
+  ).join('');
+
+  // Ay satırı
+  const today = new Date();
+  let moRow = '';
+  for (let i = 0; i < totalMonths; i++) {
+    const totalM = baseMonth + i;
+    const yr = baseYear + Math.floor(totalM / 12);
+    const mo = totalM % 12;
+    const cur = yr === today.getFullYear() && mo === today.getMonth();
+    moRow += `<div class="tl-month-cell ${cur ? 'current' : ''}" style="width:${MONTH_W}px">${TR_AYLAR[mo]}</div>`;
+  }
+
+  hdr.innerHTML =
+    `<div class="tl-year-row">${yrRow}</div>` +
+    `<div class="tl-month-row">${moRow}</div>`;
+}
+
+// ────────────────────────────────────────────────────
+function renderContentArea(totalW, totalH, totalMonths, swimTops, swimHeights) {
+  const ca   = document.getElementById('content-area');
+  const svg  = document.getElementById('conn-svg');
+  const bars = document.getElementById('bars-layer');
+
+  ca.style.width  = totalW + 'px';
+  ca.style.height = totalH + 'px';
+  svg.setAttribute('width',  totalW);
+  svg.setAttribute('height', totalH);
+  svg.style.width  = totalW + 'px';
+  svg.style.height = totalH + 'px';
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+  // Eski statik elemanları temizle (barlar dışında)
+  bars.querySelectorAll('.swim-bg,.grid-ln').forEach(el => el.remove());
+
+  // Swimlane arka planları
+  TUR_SIRASI.forEach((tur, i) => {
+    const d = document.createElement('div');
+    d.className = 'swim-bg' + (i % 2 === 1 ? ' alt' : '');
+    d.style.top    = swimTops[tur]    + 'px';
+    d.style.width  = totalW           + 'px';
+    d.style.height = swimHeights[tur] + 'px';
+    bars.appendChild(d);
+  });
+
+  // Dikey grid çizgileri + bugün
+  const todXX = todayX();
+  for (let i = 0; i <= totalMonths; i++) {
+    const totalM = baseMonth + i;
+    const mo  = totalM % 12;
+    const x   = i * MONTH_W;
+
+    const ln = document.createElement('div');
+    ln.className = 'grid-ln' + (mo === 0 ? ' yr' : '');
+    ln.style.left   = x + 'px';
+    ln.style.height = totalH + 'px';
+    bars.appendChild(ln);
+  }
+
+  if (todXX >= 0 && todXX <= totalW) {
+    const tl = document.createElement('div');
+    tl.className = 'grid-ln now';
+    tl.style.left   = todXX + 'px';
+    tl.style.height = totalH + 'px';
+    tl.innerHTML    = '<div class="now-label">Bugün</div>';
+    bars.appendChild(tl);
+  }
+}
+
+// ────────────────────────────────────────────────────
+function renderBars(kayitlar, barPos, bayraklar) {
+  document.getElementById('bars-layer').querySelectorAll('.rm-bar').forEach(el => el.remove());
+
+  kayitlar.forEach(k => {
+    const pos = barPos[k.id];
+    if (!pos) return;
+
+    const renk   = TUR_RENKLER[k.tur] || '#888';
+    const bayrak = bayraklar[k.id];
+
+    const bar = document.createElement('div');
+    bar.className   = 'rm-bar';
+    bar.id          = 'bar-' + k.id;
+    bar.dataset.id  = k.id;
+    bar.style.left   = pos.x + 'px';
+    bar.style.top    = pos.y + 'px';
+    bar.style.width  = pos.w + 'px';
+    bar.style.height = pos.h + 'px';
+    bar.style.background   = renk + '22';
+    bar.style.borderColor  = renk;
+    bar.style.zIndex       = '3';
+
+    bar.innerHTML = `
+      ${bayrak
+        ? `<span class="rm-flag" title="${bayrak.replace(/"/g,"'")}"
+             onclick="event.stopPropagation()">🚩</span>
+           <div class="delay-stripe"></div>`
+        : ''}
+      <span class="rm-bar-label">${k.ad}</span>
+      <span class="rm-bar-trl">${k.baslangicTRL}→${k.hedeflenenTRL}</span>
+    `;
+
+    bar.addEventListener('click',      ()  => { location.href = `detail.html?id=${k.id}`; });
+    bar.addEventListener('mouseenter', (e) => tooltipGoster(e, k, bayrak));
+    bar.addEventListener('mousemove',  (e) => tooltipHareketEt(e));
+    bar.addEventListener('mouseleave', tooltipGizle);
+
+    document.getElementById('bars-layer').appendChild(bar);
+  });
+}
+
+// ────────────────────────────────────────────────────
+function renderConnections(kayitlar, barPos) {
+  const svg    = document.getElementById('conn-svg');
+  const lookup = {};
+  kayitlar.forEach(k => { lookup[k.id] = k; });
+
+  // SVG defs (ok ucu)
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  defs.innerHTML = `
+    <marker id="arr" markerWidth="7" markerHeight="5"
+            refX="7" refY="2.5" orient="auto">
+      <polygon points="0 0, 7 2.5, 0 5" fill="rgba(255,255,255,0.25)"/>
+    </marker>`;
+  svg.appendChild(defs);
+
+  const cizildi = new Set();
+
+  kayitlar.forEach(r => {
+    const posR = barPos[r.id];
+    if (!posR) return;
+
+    (r.iliskiler || []).forEach(lid => {
+      const key = [r.id, lid].sort().join('||');
+      if (cizildi.has(key)) return;
+      cizildi.add(key);
+
+      const other = lookup[lid];
+      if (!other) return;
+      const posO = barPos[lid];
+      if (!posO) return;
+
+      // Yön: hangisi daha solda (daha erken) → sağa bağlanır
+      let x1, y1, x2, y2;
+      if (posR.cx <= posO.cx) {
+        x1 = posR.x + posR.w; y1 = posR.cy;
+        x2 = posO.x;           y2 = posO.cy;
+      } else {
+        x1 = posO.x + posO.w; y1 = posO.cy;
+        x2 = posR.x;           y2 = posR.cy;
+      }
+
+      const dx = Math.max(Math.abs(x2 - x1) * 0.45, 45);
+
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d',
+        `M ${x1} ${y1} C ${x1+dx} ${y1} ${x2-dx} ${y2} ${x2} ${y2}`);
+      path.setAttribute('stroke',          'rgba(255,255,255,0.18)');
+      path.setAttribute('stroke-width',    '1.5');
+      path.setAttribute('fill',            'none');
+      path.setAttribute('stroke-dasharray','5,4');
+      path.setAttribute('marker-end',      'url(#arr)');
+
+      // Hover ile bağlantıyı öne çıkar
+      path.addEventListener('mouseenter', () => {
+        path.setAttribute('stroke', 'rgba(255,255,255,0.6)');
+        path.setAttribute('stroke-width', '2.5');
+      });
+      path.addEventListener('mouseleave', () => {
+        path.setAttribute('stroke', 'rgba(255,255,255,0.18)');
+        path.setAttribute('stroke-width', '1.5');
+      });
+
+      svg.appendChild(path);
+    });
+  });
+}
+
+// ────────────────────────────────────────────────────
+//  Tooltip
+// ────────────────────────────────────────────────────
+function tooltipGoster(e, k, bayrak) {
+  const tip  = document.getElementById('tooltip');
+  const renk = TUR_RENKLER[k.tur] || '#888';
+
+  tip.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span style="background:${renk}20;color:${renk};
+                   border:1px solid ${renk}50;padding:2px 9px;
+                   border-radius:12px;font-size:11px;font-weight:700">${k.tur}</span>
+      <span style="font-family:monospace;font-size:11px;color:var(--text2)">${k.id}</span>
+    </div>
+    <div style="font-size:14px;font-weight:700;margin-bottom:8px;color:var(--text)">${k.ad}</div>
+    <div style="color:var(--text2);display:flex;flex-direction:column;gap:3px;font-size:12px">
+      <div>📅 ${tarihFormatla(k.gelistirmeBaslangic)} → ${tarihFormatla(k.gelistirmeBitis)}</div>
+      <div>📊 TRL ${k.baslangicTRL} → ${k.hedeflenenTRL}</div>
+      <div>👤 ${k.sorumlu || '—'}</div>
+      ${k.butce ? `<div>💰 ${butceFormatla(k.butce)}</div>` : ''}
+      ${(k.iliskiler||[]).length
+        ? `<div>🔗 ${k.iliskiler.length} bağlantı</div>` : ''}
+    </div>
+    ${bayrak ? `
+      <div style="margin-top:10px;padding:7px 10px;
+                  background:#e9456020;border:1px solid #e9456040;
+                  border-radius:7px;font-size:11px;color:#ff7a93;line-height:1.5">
+        🚩 ${bayrak}
+      </div>` : ''}
+  `;
+  tip.style.display = 'block';
+  tooltipHareketEt(e);
+}
+
+function tooltipHareketEt(e) {
+  const tip = document.getElementById('tooltip');
+  const mg  = 16;
+  let lft = e.clientX + mg;
+  let top = e.clientY + mg;
+  if (lft + 320 > window.innerWidth)  lft = e.clientX - 320 - mg;
+  if (top + 220 > window.innerHeight) top = e.clientY - 220 - mg;
+  tip.style.left = lft + 'px';
+  tip.style.top  = top + 'px';
+}
+
+function tooltipGizle() {
+  document.getElementById('tooltip').style.display = 'none';
+}
+
+// ────────────────────────────────────────────────────
+//  Bugüne Kaydır
+// ────────────────────────────────────────────────────
+function bugunKaydır() {
+  const rp = document.getElementById('right-panel');
+  const tx = todayX();
+  rp.scrollLeft = Math.max(0, tx - rp.clientWidth / 2);
+}
+
+// ────────────────────────────────────────────────────
+//  Başlat
+// ────────────────────────────────────────────────────
+renderRoadmap();
+
+let rzTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(rzTimer);
+  rzTimer = setTimeout(renderRoadmap, 180);
+});
+</script>
+</body>
+</html>
