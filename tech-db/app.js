@@ -5,8 +5,58 @@
 
 const DB_KEY     = 'techdb_kayitlar';
 const SAYAC_KEY  = 'techdb_sayac';
+const KONFIG_KEY = 'techdb_konfig';
 
-const TURLER = ['Teknoloji', 'Alt Sistem', 'Sistem', 'Komponent'];
+// ──────────────────────────────────────────────
+//  Sistem Konfigürasyonu
+// ──────────────────────────────────────────────
+
+const VARSAYILAN_KONFIG = {
+  gruplar: [
+    {
+      id: 'tur',
+      etiket: 'Tür',
+      aciklama: 'Kayıt türleri — Teknoloji Tanımlama Formu\'nda TÜR alanında görünür',
+      secenekler: ['Teknoloji', 'Alt Sistem', 'Sistem', 'Komponent'],
+      silinebilir: false
+    },
+    {
+      id: 'teknolojiAlani',
+      etiket: 'Teknoloji Alanı',
+      aciklama: 'Teknoloji alanı sınıflandırması',
+      secenekler: ['Malzeme', 'Yazılım'],
+      silinebilir: true
+    },
+    {
+      id: 'urunGrubu',
+      etiket: 'Ürün Grubu',
+      aciklama: 'Ürünün ait olduğu platform / araç grubu',
+      secenekler: ['Kara Araçları', 'Hava Araçları', 'Deniz Araçları', 'Uzay Araçları'],
+      silinebilir: true
+    }
+  ]
+};
+
+function konfigGetir() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(KONFIG_KEY));
+    if (stored && Array.isArray(stored.gruplar)) return stored;
+  } catch {}
+  return JSON.parse(JSON.stringify(VARSAYILAN_KONFIG));
+}
+
+function konfigKaydet(konfig) {
+  localStorage.setItem(KONFIG_KEY, JSON.stringify(konfig));
+}
+
+function konfigSecenekGetir(grupId) {
+  const grup = konfigGetir().gruplar.find(g => g.id === grupId);
+  return grup ? [...grup.secenekler] : [];
+}
+
+function turlerGetir() {
+  return konfigSecenekGetir('tur');
+}
 
 const TRL_ACIKLAMALARI = {
   1: 'Temel prensipler gözlemlenmiş',
@@ -68,6 +118,8 @@ function kayitEkle(veri) {
     hedeflenenTRL: parseInt(veri.hedeflenenTRL, 10),
     butce: parseFloat(veri.butce) || 0,
     iscilik: veri.iscilik.trim(),
+    teknolojiAlani: veri.teknolojiAlani || '',
+    urunGrubu: veri.urunGrubu || '',
     iliskiler: [],
     olusturmaTarihi: simdi,
     guncellenmeTarihi: simdi
@@ -97,6 +149,8 @@ function kayitGuncelle(id, veri) {
     hedeflenenTRL: parseInt(veri.hedeflenenTRL, 10),
     butce: parseFloat(veri.butce) || 0,
     iscilik: veri.iscilik.trim(),
+    teknolojiAlani: veri.teknolojiAlani || '',
+    urunGrubu: veri.urunGrubu || '',
     guncellenmeTarihi: new Date().toISOString()
   };
   kayitlariKaydet(kayitlar);
@@ -185,15 +239,23 @@ function urlParam(ad) {
 //  TÜR renk etiketleri
 // ──────────────────────────────────────────────
 
-const TUR_RENK = {
+const TUR_RENK_SABIT = {
   'Teknoloji':  '#4f8ef7',
   'Alt Sistem': '#f7a44f',
   'Sistem':     '#4fd97f',
   'Komponent':  '#c84ff7'
 };
 
+function turRenkGetir(tur) {
+  if (TUR_RENK_SABIT[tur]) return TUR_RENK_SABIT[tur];
+  // Bilinmeyen TÜR'ler için hash tabanlı renk üret
+  let hash = 0;
+  for (const c of (tur || '')) hash = ((hash << 5) - hash) + c.charCodeAt(0);
+  return `hsl(${Math.abs(hash) % 360}, 60%, 55%)`;
+}
+
 function turEtiketi(tur) {
-  const renk = TUR_RENK[tur] || '#888';
+  const renk = turRenkGetir(tur);
   return `<span class="tur-etiket" style="background:${renk}20;color:${renk};border:1px solid ${renk}40">${tur}</span>`;
 }
 

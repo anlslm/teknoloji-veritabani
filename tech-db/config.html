@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistem Konfigürasyonları</title>
+  <script src="app.js"></script>
+  <style id="sayfa-css"></style>
+</head>
+<body>
+
+<nav class="navbar">
+  <span class="navbar-brand">Teknoloji <span>Veritabanı</span></span>
+  <div class="tab-bar-nav">
+    <a href="index.html"   class="tab-link">📋 Kayıt Listesi</a>
+    <a href="roadmap.html" class="tab-link">🗺️ Yol Haritası</a>
+    <a href="config.html"  class="tab-link active">⚙️ Konfigürasyon</a>
+  </div>
+  <div class="navbar-spacer"></div>
+</nav>
+
+<main style="max-width:860px;margin:0 auto;padding:28px 24px">
+
+  <div style="margin-bottom:28px">
+    <h1 style="font-size:22px;font-weight:700;margin-bottom:6px">Sistem Konfigürasyonları</h1>
+    <p style="color:var(--text2);font-size:14px">
+      Teknoloji Tanımlama Formu'nda kullanılan seçenek listelerini ve değişken gruplarını yönetin.
+      Değişiklikler anında kaydedilir.
+    </p>
+  </div>
+
+  <div id="bildirim" class="alert alert-success" style="display:none"></div>
+
+  <!-- Grup kartları -->
+  <div id="grup-listesi"></div>
+
+  <!-- Yeni grup ekle -->
+  <div class="card" id="yeni-grup-panel" style="border:1px dashed var(--border)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:var(--accent)">➕ Yeni Değişken Grubu Ekle</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px">
+          Teknoloji Tanımlama Formu'na yeni bir seçenek alanı ekleyin
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="yeni-grup-toggle" onclick="yeniGrupToggle()">Genişlet</button>
+    </div>
+
+    <div id="yeni-grup-form" style="display:none">
+      <div class="form-grid-2" style="margin-bottom:14px">
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label required">Alan Adı</label>
+          <input type="text" id="yg-etiket" class="form-control"
+                 placeholder="Örn: Öncelik Seviyesi" maxlength="60"
+                 oninput="yeniGrupIdGuncelle()">
+          <p style="font-size:11px;color:var(--text2);margin-top:4px">
+            Sistem ID: <code id="yg-id-onizleme" style="color:var(--accent)">—</code>
+          </p>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Açıklama</label>
+          <input type="text" id="yg-aciklama" class="form-control"
+                 placeholder="Bu alanın ne için kullanıldığı" maxlength="120">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Başlangıç Seçenekleri</label>
+        <div id="yg-secenekler-liste"></div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <input type="text" id="yg-secenek-input" class="form-control"
+                 placeholder="Seçenek ekle..." maxlength="80"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();yeniGrupSecenekEkle()}">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="yeniGrupSecenekEkle()"
+                  style="white-space:nowrap">+ Ekle</button>
+        </div>
+      </div>
+      <div id="yeni-grup-hata" class="alert alert-danger" style="display:none"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px">
+        <button type="button" class="btn btn-ghost" onclick="yeniGrupIptal()">İptal</button>
+        <button type="button" class="btn btn-primary" onclick="yeniGrupKaydet()">Grubu Oluştur</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Silme Onay Modalı -->
+<div id="modal-overlay" style="display:none;position:fixed;inset:0;
+     background:rgba(0,0,0,.6);display:none;align-items:center;
+     justify-content:center;z-index:999" onclick="modalKapat()">
+  <div class="modal-kutu" onclick="event.stopPropagation()">
+    <div class="modal-baslik" id="modal-baslik"></div>
+    <p id="modal-mesaj" style="color:var(--text2);margin-bottom:20px;font-size:14px;line-height:1.5"></p>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="modalKapat()">İptal</button>
+      <button class="btn btn-danger" id="modal-onay-btn">Sil</button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('sayfa-css').textContent = ortakCSS() + `
+  .tab-bar-nav { display:flex;gap:3px;margin-left:20px; }
+  .tab-link {
+    padding:6px 14px;border-radius:8px;
+    font-size:13px;font-weight:500;
+    color:var(--text2);text-decoration:none;
+    transition:background .15s,color .15s;
+  }
+  .tab-link:hover { background:var(--bg3);color:var(--text);text-decoration:none; }
+  .tab-link.active { background:var(--accent);color:#fff; }
+
+  .form-grid-2 { display:grid;grid-template-columns:1fr 1fr;gap:0 20px; }
+  @media(max-width:600px){ .form-grid-2{grid-template-columns:1fr;} }
+
+  /* Grup kartı */
+  .grup-kart {
+    background:var(--bg2);border:1px solid var(--border);
+    border-radius:var(--radius);margin-bottom:16px;overflow:hidden;
+  }
+  .grup-kart-header {
+    display:flex;align-items:center;gap:12px;
+    padding:16px 20px;border-bottom:1px solid var(--border);
+    background:var(--bg3);
+  }
+  .grup-ikon { font-size:16px; }
+  .grup-etiket { font-size:15px;font-weight:700; }
+  .grup-aciklama { font-size:12px;color:var(--text2);margin-top:2px; }
+  .grup-kilit {
+    font-size:11px;color:var(--text2);background:var(--bg);
+    border:1px solid var(--border);padding:2px 8px;border-radius:5px;
+    margin-left:auto;
+  }
+  .grup-kart-body { padding:16px 20px; }
+
+  /* Seçenek satırı */
+  .secenek-satir {
+    display:flex;align-items:center;gap:10px;
+    padding:7px 0;border-bottom:1px solid var(--border)33;
+  }
+  .secenek-satir:last-child { border-bottom:none; }
+  .secenek-metin { flex:1;font-size:14px; }
+  .secenek-kullanim {
+    font-size:11px;color:var(--text2);
+    background:var(--bg);border:1px solid var(--border);
+    padding:1px 7px;border-radius:10px;
+  }
+  .secenek-sil {
+    background:none;border:none;color:var(--text2);
+    cursor:pointer;font-size:14px;padding:2px 6px;
+    border-radius:5px;transition:background .1s,color .1s;
+    line-height:1;
+  }
+  .secenek-sil:hover { background:rgba(233,69,96,.15);color:var(--danger); }
+
+  /* Seçenek ekle alanı */
+  .secenek-ekle-alan {
+    display:flex;gap:8px;margin-top:12px;padding-top:12px;
+    border-top:1px solid var(--border);
+  }
+
+  /* Yeni grup form */
+  .yg-secenek-satir {
+    display:flex;align-items:center;gap:8px;
+    padding:5px 10px;background:var(--bg3);
+    border-radius:7px;margin-bottom:6px;
+    font-size:13px;
+  }
+  .yg-secenek-sil {
+    background:none;border:none;color:var(--text2);
+    cursor:pointer;font-size:14px;margin-left:auto;
+    line-height:1;
+  }
+  .yg-secenek-sil:hover { color:var(--danger); }
+
+  .modal-overlay {
+    position:fixed;inset:0;background:rgba(0,0,0,.6);
+    align-items:center;justify-content:center;z-index:999;
+  }
+  .modal-kutu {
+    background:var(--bg2);border:1px solid var(--border);
+    border-radius:14px;padding:28px;width:400px;max-width:90vw;
+  }
+  .modal-baslik { font-size:16px;font-weight:700;margin-bottom:10px; }
+
+  code {
+    background:var(--bg3);padding:1px 6px;border-radius:4px;
+    font-size:12px;font-family:monospace;
+  }
+
+  .grup-sil-btn {
+    margin-top:12px;padding-top:12px;border-top:1px solid var(--border);
+    display:flex;justify-content:flex-end;
+  }
+`;
+
+// ──────────────────────────────────────────────
+//  Bildirim
+// ──────────────────────────────────────────────
+let bildirimTimer;
+function bildirimGoster(mesaj) {
+  const el = document.getElementById('bildirim');
+  el.textContent = '✓ ' + mesaj;
+  el.style.display = 'block';
+  clearTimeout(bildirimTimer);
+  bildirimTimer = setTimeout(() => { el.style.display = 'none'; }, 2500);
+}
+
+// ──────────────────────────────────────────────
+//  Kullanım sayısı
+// ──────────────────────────────────────────────
+function kullanimSayisi(grupId, secenek) {
+  return tumKayitlariGetir().filter(k => k[grupId] === secenek).length;
+}
+
+// ──────────────────────────────────────────────
+//  Ana Render
+// ──────────────────────────────────────────────
+function renderGruplar() {
+  const konfig = konfigGetir();
+  const liste  = document.getElementById('grup-listesi');
+
+  liste.innerHTML = konfig.gruplar.map(grup => {
+    const seceneklerHTML = grup.secenekler.length === 0
+      ? `<div style="color:var(--text2);font-size:13px;font-style:italic;padding:8px 0">
+           Henüz seçenek eklenmedi.
+         </div>`
+      : grup.secenekler.map(s => {
+          const kSayisi = kullanimSayisi(grup.id, s);
+          return `<div class="secenek-satir">
+            <span class="secenek-metin">${s}</span>
+            ${kSayisi > 0
+              ? `<span class="secenek-kullanim" title="${kSayisi} kayıtta kullanılıyor">
+                   ${kSayisi} kayıt
+                 </span>`
+              : ''}
+            <button class="secenek-sil"
+              title="Seçeneği sil"
+              onclick="secenekSilOnay('${grup.id}','${s.replace(/'/g,"\\'")}',${kSayisi})">✕</button>
+          </div>`;
+        }).join('');
+
+    const silBtnHTML = grup.silinebilir
+      ? `<div class="grup-sil-btn">
+           <button class="btn btn-danger btn-sm"
+             onclick="grupSilOnay('${grup.id}','${grup.etiket.replace(/'/g,"\\'")}')">
+             Bu Grubu Sil
+           </button>
+         </div>`
+      : '';
+
+    return `<div class="grup-kart" id="grup-${grup.id}">
+      <div class="grup-kart-header">
+        <span class="grup-ikon">📁</span>
+        <div style="flex:1">
+          <div class="grup-etiket">${grup.etiket}
+            <code style="margin-left:8px;font-size:10px">${grup.id}</code>
+          </div>
+          <div class="grup-aciklama">${grup.aciklama || ''}</div>
+        </div>
+        <span class="badge">${grup.secenekler.length} seçenek</span>
+        ${!grup.silinebilir ? '<span class="grup-kilit">🔒 Sabit</span>' : ''}
+      </div>
+      <div class="grup-kart-body">
+        ${seceneklerHTML}
+        <div class="secenek-ekle-alan">
+          <input type="text" id="ekle-${grup.id}" class="form-control"
+                 placeholder="Yeni seçenek yazın..." maxlength="80"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();secenekEkle('${grup.id}')}">
+          <button class="btn btn-ghost btn-sm" onclick="secenekEkle('${grup.id}')"
+                  style="white-space:nowrap">+ Ekle</button>
+        </div>
+        ${silBtnHTML}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ──────────────────────────────────────────────
+//  Seçenek Ekle
+// ──────────────────────────────────────────────
+function secenekEkle(grupId) {
+  const input = document.getElementById('ekle-' + grupId);
+  const deger = input.value.trim();
+  if (!deger) return;
+
+  const konfig = konfigGetir();
+  const grup   = konfig.gruplar.find(g => g.id === grupId);
+  if (!grup) return;
+
+  if (grup.secenekler.some(s => s.toLowerCase() === deger.toLowerCase())) {
+    input.style.borderColor = 'var(--danger)';
+    setTimeout(() => { input.style.borderColor = ''; }, 1500);
+    return;
+  }
+
+  grup.secenekler.push(deger);
+  konfigKaydet(konfig);
+  input.value = '';
+  renderGruplar();
+  bildirimGoster(`"${deger}" seçeneği eklendi.`);
+}
+
+// ──────────────────────────────────────────────
+//  Seçenek Sil (onaylı)
+// ──────────────────────────────────────────────
+function secenekSilOnay(grupId, secenek, kullanimSay) {
+  const uyari = kullanimSay > 0
+    ? `⚠️ Bu seçenek <strong>${kullanimSay} kayıtta</strong> kullanılmaktadır. Silindikten sonra bu kayıtlar ilgili alanda boş görünür.`
+    : `"<strong>${secenek}</strong>" seçeneğini silmek istediğinize emin misiniz?`;
+
+  document.getElementById('modal-baslik').textContent = 'Seçeneği Sil';
+  document.getElementById('modal-mesaj').innerHTML = uyari;
+  document.getElementById('modal-onay-btn').onclick = () => {
+    secenekSil(grupId, secenek);
+    modalKapat();
+  };
+  document.getElementById('modal-overlay').style.display = 'flex';
+}
+
+function secenekSil(grupId, secenek) {
+  const konfig = konfigGetir();
+  const grup   = konfig.gruplar.find(g => g.id === grupId);
+  if (!grup) return;
+  grup.secenekler = grup.secenekler.filter(s => s !== secenek);
+  konfigKaydet(konfig);
+  renderGruplar();
+  bildirimGoster(`"${secenek}" silindi.`);
+}
+
+// ──────────────────────────────────────────────
+//  Grup Sil (onaylı) — sadece silinebilir:true olanlar
+// ──────────────────────────────────────────────
+function grupSilOnay(grupId, etiket) {
+  const kayitlar = tumKayitlariGetir();
+  const kullanan = kayitlar.filter(k => k[grupId] && k[grupId] !== '').length;
+
+  const uyari = kullanan > 0
+    ? `⚠️ Bu değişken grubu <strong>${kullanan} kayıtta</strong> kullanılmaktadır. Grup silindikten sonra bu kayıtlardaki veriler kaybolmaz ancak bir daha düzenlenemez. Emin misiniz?`
+    : `"<strong>${etiket}</strong>" değişken grubunu kalıcı olarak silmek istediğinize emin misiniz?`;
+
+  document.getElementById('modal-baslik').textContent = 'Değişken Grubunu Sil';
+  document.getElementById('modal-mesaj').innerHTML = uyari;
+  document.getElementById('modal-onay-btn').onclick = () => {
+    grupSil(grupId);
+    modalKapat();
+  };
+  document.getElementById('modal-overlay').style.display = 'flex';
+}
+
+function grupSil(grupId) {
+  const konfig = konfigGetir();
+  konfig.gruplar = konfig.gruplar.filter(g => g.id !== grupId);
+  konfigKaydet(konfig);
+  renderGruplar();
+  bildirimGoster('Değişken grubu silindi.');
+}
+
+// ──────────────────────────────────────────────
+//  Yeni Grup Formu
+// ──────────────────────────────────────────────
+let yeniGrupSecenekler = [];
+
+function yeniGrupToggle() {
+  const form = document.getElementById('yeni-grup-form');
+  const btn  = document.getElementById('yeni-grup-toggle');
+  const acik = form.style.display !== 'none';
+  form.style.display = acik ? 'none' : 'block';
+  btn.textContent = acik ? 'Genişlet' : 'Daralt';
+  if (!acik) { yeniGrupSifirla(); }
+}
+
+function yeniGrupIptal() {
+  document.getElementById('yeni-grup-form').style.display = 'none';
+  document.getElementById('yeni-grup-toggle').textContent = 'Genişlet';
+  yeniGrupSifirla();
+}
+
+function yeniGrupSifirla() {
+  yeniGrupSecenekler = [];
+  document.getElementById('yg-etiket').value = '';
+  document.getElementById('yg-aciklama').value = '';
+  document.getElementById('yg-secenek-input').value = '';
+  document.getElementById('yg-id-onizleme').textContent = '—';
+  document.getElementById('yeni-grup-hata').style.display = 'none';
+  renderYeniGrupSecenekler();
+}
+
+function etikettenIdUret(etiket) {
+  return etiket.toLowerCase()
+    .replace(/ü/g,'u').replace(/ö/g,'o').replace(/ı/g,'i').replace(/ş/g,'s')
+    .replace(/ğ/g,'g').replace(/ç/g,'c').replace(/â/g,'a').replace(/î/g,'i')
+    .replace(/\s+(.)/g, (_, c) => c.toUpperCase())  // camelCase
+    .replace(/[^a-zA-Z0-9]/g,'');
+}
+
+function yeniGrupIdGuncelle() {
+  const etiket = document.getElementById('yg-etiket').value.trim();
+  const id = etiket ? etikettenIdUret(etiket) : '—';
+  document.getElementById('yg-id-onizleme').textContent = id;
+}
+
+function yeniGrupSecenekEkle() {
+  const input = document.getElementById('yg-secenek-input');
+  const deger = input.value.trim();
+  if (!deger) return;
+  if (!yeniGrupSecenekler.includes(deger)) {
+    yeniGrupSecenekler.push(deger);
+    renderYeniGrupSecenekler();
+  }
+  input.value = '';
+}
+
+function yeniGrupSecenekKaldir(idx) {
+  yeniGrupSecenekler.splice(idx, 1);
+  renderYeniGrupSecenekler();
+}
+
+function renderYeniGrupSecenekler() {
+  const kap = document.getElementById('yg-secenekler-liste');
+  if (yeniGrupSecenekler.length === 0) {
+    kap.innerHTML = '<div style="color:var(--text2);font-size:12px;font-style:italic;margin-bottom:6px">Henüz seçenek eklenmedi.</div>';
+    return;
+  }
+  kap.innerHTML = yeniGrupSecenekler.map((s, i) =>
+    `<div class="yg-secenek-satir">
+      <span>${s}</span>
+      <button class="yg-secenek-sil" onclick="yeniGrupSecenekKaldir(${i})">✕</button>
+    </div>`
+  ).join('');
+}
+
+function yeniGrupKaydet() {
+  const etiket   = document.getElementById('yg-etiket').value.trim();
+  const aciklama = document.getElementById('yg-aciklama').value.trim();
+  const hataDiv  = document.getElementById('yeni-grup-hata');
+
+  if (!etiket) {
+    hataDiv.textContent = 'Alan adı zorunludur.';
+    hataDiv.style.display = 'block';
+    return;
+  }
+
+  const id = etikettenIdUret(etiket);
+  if (!id) {
+    hataDiv.textContent = 'Geçerli bir alan adı girin.';
+    hataDiv.style.display = 'block';
+    return;
+  }
+
+  const konfig = konfigGetir();
+  if (konfig.gruplar.some(g => g.id === id)) {
+    hataDiv.textContent = `"${id}" ID'si zaten mevcut. Farklı bir ad deneyin.`;
+    hataDiv.style.display = 'block';
+    return;
+  }
+
+  hataDiv.style.display = 'none';
+
+  konfig.gruplar.push({
+    id,
+    etiket,
+    aciklama,
+    secenekler: [...yeniGrupSecenekler],
+    silinebilir: true
+  });
+
+  konfigKaydet(konfig);
+  yeniGrupIptal();
+  renderGruplar();
+  bildirimGoster(`"${etiket}" değişken grubu oluşturuldu.`);
+
+  // Yeni gruba kaydır
+  setTimeout(() => {
+    const el = document.getElementById('grup-' + id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 100);
+}
+
+// ──────────────────────────────────────────────
+//  Modal
+// ──────────────────────────────────────────────
+function modalKapat() {
+  document.getElementById('modal-overlay').style.display = 'none';
+}
+
+// ──────────────────────────────────────────────
+//  Başlat
+// ──────────────────────────────────────────────
+renderGruplar();
+renderYeniGrupSecenekler();
+</script>
+</body>
+</html>

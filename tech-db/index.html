@@ -14,6 +14,7 @@
   <div class="tab-bar-nav">
     <a href="index.html"   class="tab-link active">📋 Kayıt Listesi</a>
     <a href="roadmap.html" class="tab-link">🗺️ Yol Haritası</a>
+    <a href="config.html"  class="tab-link">⚙️ Konfigürasyon</a>
   </div>
   <div class="navbar-spacer"></div>
   <button class="btn btn-primary" onclick="location.href='form.html'">
@@ -177,18 +178,16 @@ let silinecekId = null;
 function istatistikleriRenderEt(kayitlar) {
   const toplam = kayitlar.length;
   const turSayilari = {};
-  TURLER.forEach(t => { turSayilari[t] = 0; });
+  turlerGetir().forEach(t => { turSayilari[t] = 0; });
   kayitlar.forEach(k => { if (turSayilari[k.tur] !== undefined) turSayilari[k.tur]++; });
-
-  const renkler = { 'Teknoloji': '#4f8ef7', 'Alt Sistem': '#f7a44f', 'Sistem': '#4fd97f', 'Komponent': '#c84ff7' };
 
   let html = `<div class="istat-kart">
     <span class="istat-sayi">${toplam}</span>
     <span class="istat-etiket">Toplam Kayıt</span>
   </div>`;
 
-  TURLER.forEach(tur => {
-    const r = renkler[tur] || 'var(--accent)';
+  turlerGetir().forEach(tur => {
+    const r = turRenkGetir(tur);
     html += `<div class="istat-kart" style="border-left: 3px solid ${r}">
       <span class="istat-sayi" style="color:${r}">${turSayilari[tur]}</span>
       <span class="istat-etiket">${tur}</span>

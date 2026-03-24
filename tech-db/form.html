@@ -30,10 +30,6 @@
           <label class="form-label required">Tür</label>
           <select id="tur" class="form-control" required>
             <option value="">Seçiniz...</option>
-            <option>Teknoloji</option>
-            <option>Alt Sistem</option>
-            <option>Sistem</option>
-            <option>Komponent</option>
           </select>
         </div>
         <div class="form-group">
@@ -43,6 +39,18 @@
         <div class="form-group" style="grid-column:1/-1">
           <label class="form-label required">Sorumlu</label>
           <input type="text" id="sorumlu" class="form-control" placeholder="Sorumlu kişi adı soyadı" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Teknoloji Alanı</label>
+          <select id="teknoloji-alani" class="form-control">
+            <option value="">Seçiniz...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ürün Grubu</label>
+          <select id="urun-grubu" class="form-control">
+            <option value="">Seçiniz...</option>
+          </select>
         </div>
       </div>
     </div>
@@ -421,6 +429,8 @@ function formKaydet(e) {
     hedeflenenTRL:       document.getElementById('hedeflenen-trl').value,
     butce:               document.getElementById('butce').value,
     iscilik:             document.getElementById('iscilik').value,
+    teknolojiAlani:      document.getElementById('teknoloji-alani').value,
+    urunGrubu:           document.getElementById('urun-grubu').value,
     iliskiler:           [...seciliIliskiler]
   };
 
@@ -436,8 +446,22 @@ function formKaydet(e) {
 // ──────────────────────────────────────────────
 //  Sayfa yüklenince: düzenleme mi? yeni mi?
 // ──────────────────────────────────────────────
+function dinamikSelectDoldur(selectId, grupId) {
+  const sel = document.getElementById(selectId);
+  konfigSecenekGetir(grupId).forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = opt.textContent = s;
+    sel.appendChild(opt);
+  });
+}
+
 function sayfaBaslat() {
   trlSecenekleriniDoldur();
+
+  // Config'den gelen seçeneklerle dinamik selectleri doldur
+  dinamikSelectDoldur('tur',              'tur');
+  dinamikSelectDoldur('teknoloji-alani',  'teknolojiAlani');
+  dinamikSelectDoldur('urun-grubu',       'urunGrubu');
 
   const id = urlParam('id');
   if (id) {
@@ -465,8 +489,10 @@ function sayfaBaslat() {
     document.getElementById('bitis-tarihi').value    = kayit.gelistirmeBitis;
     document.getElementById('baslangic-trl').value   = kayit.baslangicTRL;
     document.getElementById('hedeflenen-trl').value  = kayit.hedeflenenTRL;
-    document.getElementById('butce').value           = kayit.butce || '';
-    document.getElementById('iscilik').value         = kayit.iscilik || '';
+    document.getElementById('butce').value              = kayit.butce || '';
+    document.getElementById('iscilik').value            = kayit.iscilik || '';
+    document.getElementById('teknoloji-alani').value    = kayit.teknolojiAlani || '';
+    document.getElementById('urun-grubu').value         = kayit.urunGrubu || '';
 
     // İlişkiler
     seciliIliskiler = [...(kayit.iliskiler || [])];

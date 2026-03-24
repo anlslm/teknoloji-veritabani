@@ -14,6 +14,7 @@
   <div class="tab-bar-nav">
     <a href="index.html"   class="tab-link">📋 Kayıt Listesi</a>
     <a href="roadmap.html" class="tab-link active">🗺️ Yol Haritası</a>
+    <a href="config.html"  class="tab-link">⚙️ Konfigürasyon</a>
   </div>
   <div class="navbar-spacer"></div>
   <div style="display:flex;gap:8px;align-items:center">
@@ -204,13 +205,13 @@ document.getElementById('sayfa-css').textContent = ortakCSS() + `
 // ────────────────────────────────────────────────────
 //  Sabitler
 // ────────────────────────────────────────────────────
-const TUR_SIRASI  = ['Sistem', 'Alt Sistem', 'Teknoloji', 'Komponent'];
-const TUR_RENKLER = {
-  'Sistem':     '#4fd97f',
-  'Alt Sistem': '#f7a44f',
-  'Teknoloji':  '#4f8ef7',
-  'Komponent':  '#c84ff7',
-};
+// Swimlane sırası: config'den gelir, Sistem önce (yüksekten alçağa mantığı için tersine çevir)
+function turSirasiGetir() {
+  const turler = konfigSecenekGetir('tur');
+  // Sistem en üstte görünsün: config sırasını tersine çevir
+  return [...turler].reverse();
+}
+const TUR_SIRASI = turSirasiGetir(); // sayfa yüklenirken sabitlenir
 const TR_AYLAR = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
 const TL_H     = 52;   // timeline başlığı yüksekliği
 const ROW_H    = 50;   // swimlane'deki satır yüksekliği
@@ -345,7 +346,7 @@ function renderLeftPanel(swimTops, swimHeights) {
   document.getElementById('lp-spacer').style.height = TL_H + 'px';
   document.getElementById('lp-lanes').innerHTML =
     TUR_SIRASI.map(tur => {
-      const renk = TUR_RENKLER[tur] || '#888';
+      const renk = turRenkGetir(tur);
       return `<div class="swim-label"
         style="height:${swimHeights[tur]}px;border-left:3px solid ${renk};color:${renk}">
         ${tur}
@@ -446,7 +447,7 @@ function renderBars(kayitlar, barPos, bayraklar) {
     const pos = barPos[k.id];
     if (!pos) return;
 
-    const renk   = TUR_RENKLER[k.tur] || '#888';
+    const renk   = turRenkGetir(k.tur);
     const bayrak = bayraklar[k.id];
 
     const bar = document.createElement('div');
@@ -552,7 +553,7 @@ function renderConnections(kayitlar, barPos) {
 // ────────────────────────────────────────────────────
 function tooltipGoster(e, k, bayrak) {
   const tip  = document.getElementById('tooltip');
-  const renk = TUR_RENKLER[k.tur] || '#888';
+  const renk = turRenkGetir(k.tur);
 
   tip.innerHTML = `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
