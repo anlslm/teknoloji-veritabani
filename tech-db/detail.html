@@ -106,9 +106,11 @@ document.getElementById('sayfa-css').textContent = ortakCSS() + `
     background: var(--bg3);
     color: var(--text2);
   }
-  .trl-kutu.aktif-bas  { background: #e9456030; border-color: #e94560; color: #e94560; }
-  .trl-kutu.aktif-ara  { background: #f7a44f20; border-color: #f7a44f; color: #f7a44f; }
-  .trl-kutu.aktif-hed  { background: #4fd97f30; border-color: #4fd97f; color: #4fd97f; }
+  .trl-kutu.aktif-bas      { background: #e9456030; border-color: #e94560; color: #e94560; }
+  .trl-kutu.aktif-ara      { background: #f7a44f20; border-color: #f7a44f; color: #f7a44f; }
+  .trl-kutu.aktif-gun      { background: #f7a44f40; border-color: #f7a44f; color: #f7a44f; font-size: 14px; }
+  .trl-kutu.aktif-ara-hed  { background: #4f8ef715; border-color: #4f8ef750; color: #4f8ef7; }
+  .trl-kutu.aktif-hed      { background: #4fd97f30; border-color: #4fd97f; color: #4fd97f; }
 
   /* İlişkili Kayıtlar */
   .iliski-kart {
@@ -166,13 +168,16 @@ function duzenleGit() {
   if (mevcutId) location.href = `form.html?id=${mevcutId}`;
 }
 
-function trlGorsel(bas, hed) {
+function trlGorsel(bas, gun, hed) {
   let html = '<div class="trl-kutular">';
   for (let i = 1; i <= 9; i++) {
     let sinif = '';
-    if (i < bas)       sinif = '';
+    if (i < bas)        sinif = '';
     else if (i === bas) sinif = 'aktif-bas';
-    else if (i < hed)  sinif = 'aktif-ara';
+    else if (gun && i > bas && i < gun) sinif = 'aktif-ara';
+    else if (gun && i === gun && gun < hed) sinif = 'aktif-gun';
+    else if (gun && i > gun && i < hed) sinif = 'aktif-ara-hed';
+    else if (i < hed)   sinif = gun ? 'aktif-ara-hed' : 'aktif-ara';
     else if (i === hed) sinif = 'aktif-hed';
     html += `<div class="trl-kutu ${sinif}" title="TRL ${i}: ${TRL_ACIKLAMALARI[i]}">${i}</div>`;
   }
@@ -228,6 +233,12 @@ function sayfaRenderEt() {
         <div class="bilgi-deger" style="color:#e94560">TRL ${k.baslangicTRL}</div>
         <div class="bilgi-alt">${TRL_ACIKLAMALARI[k.baslangicTRL]}</div>
       </div>
+      ${k.guncelTRL ? `
+      <div class="bilgi-kart" style="border-color:#f7a44f44">
+        <div class="bilgi-etiket" style="color:#f7a44f">Güncel TRL</div>
+        <div class="bilgi-deger" style="color:#f7a44f">TRL ${k.guncelTRL}</div>
+        <div class="bilgi-alt">${TRL_ACIKLAMALARI[k.guncelTRL]}</div>
+      </div>` : ''}
       <div class="bilgi-kart">
         <div class="bilgi-etiket">Hedeflenen TRL</div>
         <div class="bilgi-deger" style="color:#4fd97f">TRL ${k.hedeflenenTRL}</div>
@@ -265,16 +276,13 @@ function sayfaRenderEt() {
     <div class="card trl-bolum" style="margin-bottom:20px">
       <div class="bolum-baslik">TRL Seyri</div>
       <div class="trl-satir">
-        <span class="trl-satir-etiket">Başlangıç (${k.baslangicTRL})</span>
-        ${trlGorsel(k.baslangicTRL, k.baslangicTRL)}
-      </div>
-      <div class="trl-satir">
         <span class="trl-satir-etiket">Hedef (${k.hedeflenenTRL})</span>
-        ${trlGorsel(k.baslangicTRL, k.hedeflenenTRL)}
+        ${trlGorsel(k.baslangicTRL, k.guncelTRL || null, k.hedeflenenTRL)}
       </div>
       <div style="margin-top:12px;font-size:12px;color:var(--text2)">
         <span style="color:#e94560">■</span> Başlangıç &nbsp;
-        <span style="color:#f7a44f">■</span> Geliştirilecek Aralık &nbsp;
+        ${k.guncelTRL ? `<span style="color:#f7a44f">■</span> Güncel &nbsp;` : ''}
+        <span style="color:#4f8ef7">■</span> Geliştirilecek Aralık &nbsp;
         <span style="color:#4fd97f">■</span> Hedef
       </div>
     </div>

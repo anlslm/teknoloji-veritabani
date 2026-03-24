@@ -73,13 +73,21 @@
     <!-- BÖLÜM 3: TRL -->
     <div class="card" style="margin-bottom:20px">
       <div class="bolum-baslik">Teknoloji Hazırlık Seviyesi (TRL)</div>
-      <div class="form-grid-2">
+      <div class="form-grid-3">
         <div class="form-group">
           <label class="form-label required">Başlangıç TRL</label>
           <select id="baslangic-trl" class="form-control" required onchange="trlGuncelle()">
             <option value="">Seçiniz...</option>
           </select>
           <p id="baslangic-trl-aciklama" class="trl-aciklama"></p>
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="color:var(--warning)">Güncel TRL</label>
+          <select id="guncel-trl" class="form-control" onchange="trlGuncelle()"
+                  style="border-color:var(--warning)44">
+            <option value="">Seçiniz...</option>
+          </select>
+          <p id="guncel-trl-aciklama" class="trl-aciklama"></p>
         </div>
         <div class="form-group">
           <label class="form-label required">Hedeflenen TRL</label>
@@ -166,7 +174,12 @@ document.getElementById('sayfa-css').textContent = ortakCSS() + `
     grid-template-columns: 1fr 1fr;
     gap: 0 20px;
   }
-  @media (max-width: 600px) { .form-grid-2 { grid-template-columns: 1fr; } }
+  .form-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0 16px;
+  }
+  @media (max-width: 700px) { .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; } }
 
   .trl-aciklama {
     font-size: 11px;
@@ -194,9 +207,11 @@ document.getElementById('sayfa-css').textContent = ortakCSS() + `
     color: var(--text2);
     transition: all .2s;
   }
-  .trl-kutu.dolu      { background: #e9456025; border-color: #e94560; color: #e94560; }
-  .trl-kutu.hedef-ara { background: #4f8ef720; border-color: #4f8ef7; color: #4f8ef7; }
-  .trl-kutu.hedef     { background: #4fd97f25; border-color: #4fd97f; color: #4fd97f; }
+  .trl-kutu.dolu       { background: #e9456025; border-color: #e94560; color: #e94560; }
+  .trl-kutu.guncel-ara { background: #f7a44f25; border-color: #f7a44f; color: #f7a44f; }
+  .trl-kutu.guncel     { background: #f7a44f40; border-color: #f7a44f; color: #f7a44f; font-size:15px; }
+  .trl-kutu.hedef-ara  { background: #4f8ef718; border-color: #4f8ef750; color: #4f8ef7; }
+  .trl-kutu.hedef      { background: #4fd97f25; border-color: #4fd97f; color: #4fd97f; }
 
   /* İlişki öneri kutusu */
   .iliski-oneri {
@@ -255,10 +270,9 @@ document.getElementById('sayfa-css').textContent = ortakCSS() + `
 //  TRL seçenekleri doldur
 // ──────────────────────────────────────────────
 function trlSecenekleriniDoldur() {
-  ['baslangic-trl', 'hedeflenen-trl'].forEach(id => {
+  ['baslangic-trl', 'guncel-trl', 'hedeflenen-trl'].forEach(id => {
     const sel = document.getElementById(id);
     const mevcut = sel.value;
-    // Mevcut seçenek dışındakileri koru
     while (sel.options.length > 1) sel.remove(1);
     for (let i = 1; i <= 9; i++) {
       const opt = document.createElement('option');
@@ -272,26 +286,31 @@ function trlSecenekleriniDoldur() {
 
 function trlGuncelle() {
   const bas = parseInt(document.getElementById('baslangic-trl').value, 10);
+  const gun = parseInt(document.getElementById('guncel-trl').value, 10);
   const hed = parseInt(document.getElementById('hedeflenen-trl').value, 10);
 
   document.getElementById('baslangic-trl-aciklama').textContent =
     bas ? `TRL ${bas}: ${TRL_ACIKLAMALARI[bas]}` : '';
+  document.getElementById('guncel-trl-aciklama').textContent =
+    gun ? `TRL ${gun}: ${TRL_ACIKLAMALARI[gun]}` : '';
   document.getElementById('hedeflenen-trl-aciklama').textContent =
     hed ? `TRL ${hed}: ${TRL_ACIKLAMALARI[hed]}` : '';
 
-  // Görsel güncelle
+  // Görsel güncelle — başlangıç / güncel / hedef üç noktalı
   const gorsel = document.getElementById('trl-gorsel');
   if (!bas && !hed) { gorsel.innerHTML = ''; return; }
   let html = '';
   for (let i = 1; i <= 9; i++) {
     let sinif = '';
     if (bas && hed) {
-      if (i < bas)       sinif = '';
+      if (i < bas)        sinif = '';
       else if (i === bas) sinif = 'dolu';
-      else if (i < hed)  sinif = 'hedef-ara';
+      else if (gun && i <= gun && i < hed) sinif = 'guncel-ara';
+      else if (gun && i === gun) sinif = gun === hed ? 'hedef' : 'guncel';
+      else if (i < hed)   sinif = 'hedef-ara';
       else if (i === hed) sinif = 'hedef';
     } else if (bas && i <= bas) sinif = 'dolu';
-    else if (hed && i <= hed) sinif = 'hedef-ara';
+    else if (hed && i <= hed)   sinif = 'hedef-ara';
     html += `<div class="trl-kutu ${sinif}">${i}</div>`;
   }
   gorsel.innerHTML = html;
@@ -426,6 +445,7 @@ function formKaydet(e) {
     gelistirmeBaslangic: document.getElementById('baslangic-tarihi').value,
     gelistirmeBitis:     document.getElementById('bitis-tarihi').value,
     baslangicTRL:        document.getElementById('baslangic-trl').value,
+    guncelTRL:           document.getElementById('guncel-trl').value,
     hedeflenenTRL:       document.getElementById('hedeflenen-trl').value,
     butce:               document.getElementById('butce').value,
     iscilik:             document.getElementById('iscilik').value,
@@ -488,6 +508,7 @@ function sayfaBaslat() {
     document.getElementById('baslangic-tarihi').value = kayit.gelistirmeBaslangic;
     document.getElementById('bitis-tarihi').value    = kayit.gelistirmeBitis;
     document.getElementById('baslangic-trl').value   = kayit.baslangicTRL;
+    document.getElementById('guncel-trl').value      = kayit.guncelTRL || '';
     document.getElementById('hedeflenen-trl').value  = kayit.hedeflenenTRL;
     document.getElementById('butce').value              = kayit.butce || '';
     document.getElementById('iscilik').value            = kayit.iscilik || '';

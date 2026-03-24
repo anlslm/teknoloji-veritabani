@@ -178,6 +178,19 @@ document.getElementById('sayfa-css').textContent = ortakCSS() + `
     background: rgba(0,0,0,.35); padding: 1px 5px;
     border-radius: 4px; color: rgba(255,255,255,.9);
   }
+  .rm-bar-guncel-trl {
+    flex-shrink: 0;
+    font-size: 11px; font-weight: 800;
+    background: rgba(255,255,255,.25); padding: 1px 6px;
+    border-radius: 4px; color: #fff;
+    border: 1px solid rgba(255,255,255,.4);
+  }
+  .rm-bar-progress {
+    position: absolute; bottom: 0; left: 0;
+    height: 3px; border-radius: 0 0 5px 0;
+    background: rgba(255,255,255,.55);
+    pointer-events: none;
+  }
   .rm-flag {
     flex-shrink: 0; font-size: 12px;
     animation: flagpulse 2s ease-in-out infinite;
@@ -205,13 +218,8 @@ document.getElementById('sayfa-css').textContent = ortakCSS() + `
 // ────────────────────────────────────────────────────
 //  Sabitler
 // ────────────────────────────────────────────────────
-// Swimlane sırası: config'den gelir, Sistem önce (yüksekten alçağa mantığı için tersine çevir)
-function turSirasiGetir() {
-  const turler = konfigSecenekGetir('tur');
-  // Sistem en üstte görünsün: config sırasını tersine çevir
-  return [...turler].reverse();
-}
-const TUR_SIRASI = turSirasiGetir(); // sayfa yüklenirken sabitlenir
+// Swimlane sırası: her zaman sabit — Sistem üstte, Teknoloji altta
+const TUR_SIRASI = ['Sistem', 'Alt Sistem', 'Komponent', 'Teknoloji'];
 const TR_AYLAR = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
 const TL_H     = 52;   // timeline başlığı yüksekliği
 const ROW_H    = 50;   // swimlane'deki satır yüksekliği
@@ -462,6 +470,12 @@ function renderBars(kayitlar, barPos, bayraklar) {
     bar.style.borderColor  = renk;
     bar.style.zIndex       = '3';
 
+    // Güncel TRL ilerleme çubuğu (yüzde)
+    const trlAralik = (k.hedeflenenTRL || 9) - (k.baslangicTRL || 1);
+    const trlIlerleme = k.guncelTRL && trlAralik > 0
+      ? Math.round(((k.guncelTRL - k.baslangicTRL) / trlAralik) * 100)
+      : 0;
+
     bar.innerHTML = `
       ${bayrak
         ? `<span class="rm-flag" title="${bayrak.replace(/"/g,"'")}"
@@ -469,7 +483,13 @@ function renderBars(kayitlar, barPos, bayraklar) {
            <div class="delay-stripe"></div>`
         : ''}
       <span class="rm-bar-label">${k.ad}</span>
+      ${k.guncelTRL
+        ? `<span class="rm-bar-guncel-trl" title="Güncel TRL">▶${k.guncelTRL}</span>`
+        : ''}
       <span class="rm-bar-trl">${k.baslangicTRL}→${k.hedeflenenTRL}</span>
+      ${trlIlerleme > 0
+        ? `<div class="rm-bar-progress" style="width:${trlIlerleme}%"></div>`
+        : ''}
     `;
 
     bar.addEventListener('click',      ()  => { location.href = `detail.html?id=${k.id}`; });
@@ -565,7 +585,7 @@ function tooltipGoster(e, k, bayrak) {
     <div style="font-size:14px;font-weight:700;margin-bottom:8px;color:var(--text)">${k.ad}</div>
     <div style="color:var(--text2);display:flex;flex-direction:column;gap:3px;font-size:12px">
       <div>📅 ${tarihFormatla(k.gelistirmeBaslangic)} → ${tarihFormatla(k.gelistirmeBitis)}</div>
-      <div>📊 TRL ${k.baslangicTRL} → ${k.hedeflenenTRL}</div>
+      <div>📊 TRL ${k.baslangicTRL} ${k.guncelTRL ? `→ <strong style="color:#fff">▶${k.guncelTRL}</strong>` : ''} → ${k.hedeflenenTRL}</div>
       <div>👤 ${k.sorumlu || '—'}</div>
       ${k.butce ? `<div>💰 ${butceFormatla(k.butce)}</div>` : ''}
       ${(k.iliskiler||[]).length
