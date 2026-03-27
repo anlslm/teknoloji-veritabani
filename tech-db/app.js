@@ -33,6 +33,20 @@ const VARSAYILAN_KONFIG = {
       aciklama: 'Ürünün ait olduğu platform / araç grubu',
       secenekler: ['Kara Araçları', 'Hava Araçları', 'Deniz Araçları', 'Uzay Araçları'],
       silinebilir: true
+    },
+    {
+      id: 'durumu',
+      etiket: 'Durumu',
+      aciklama: 'Kaydın mevcut durumu / aşaması — Konfigürasyon ekranından özelleştirilebilir',
+      secenekler: [],
+      silinebilir: true
+    },
+    {
+      id: 'faaliyetPlani',
+      etiket: 'Faaliyet Planı',
+      aciklama: 'Kaydın bağlı olduğu faaliyet planı — Konfigürasyon ekranından özelleştirilebilir',
+      secenekler: [],
+      silinebilir: true
     }
   ]
 };
@@ -121,6 +135,8 @@ function kayitEkle(veri) {
     iscilik: veri.iscilik.trim(),
     teknolojiAlani: veri.teknolojiAlani || '',
     urunGrubu: veri.urunGrubu || '',
+    durumu: veri.durumu || '',
+    faaliyetPlani: veri.faaliyetPlani || '',
     aktif: veri.aktif !== undefined ? !!veri.aktif : true,
     trlHedefleri: Array.isArray(veri.trlHedefleri)
       ? veri.trlHedefleri.filter(h => h.hedef && h.tarih)
@@ -157,6 +173,8 @@ function kayitGuncelle(id, veri) {
     iscilik: veri.iscilik.trim(),
     teknolojiAlani: veri.teknolojiAlani || '',
     urunGrubu: veri.urunGrubu || '',
+    durumu: veri.durumu || '',
+    faaliyetPlani: veri.faaliyetPlani || '',
     aktif: veri.aktif !== undefined ? !!veri.aktif : (kayitlar[idx].aktif !== false),
     trlHedefleri: Array.isArray(veri.trlHedefleri)
       ? veri.trlHedefleri.filter(h => h.hedef && h.tarih)

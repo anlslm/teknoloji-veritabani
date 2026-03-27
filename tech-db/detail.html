@@ -273,6 +273,16 @@ function sayfaRenderEt() {
         <div class="bilgi-etiket">Ürün Grubu</div>
         <div class="bilgi-deger" style="font-size:15px">${k.urunGrubu}</div>
       </div>` : ''}
+      ${k.durumu ? `
+      <div class="bilgi-kart">
+        <div class="bilgi-etiket">Durumu</div>
+        <div class="bilgi-deger" style="font-size:15px">${k.durumu}</div>
+      </div>` : ''}
+      ${k.faaliyetPlani ? `
+      <div class="bilgi-kart">
+        <div class="bilgi-etiket">Faaliyet Planı</div>
+        <div class="bilgi-deger" style="font-size:15px">${k.faaliyetPlani}</div>
+      </div>` : ''}
     </div>
 
     <!-- TRL Görseli -->

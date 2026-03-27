@@ -52,8 +52,20 @@
             <option value="">Seçiniz...</option>
           </select>
         </div>
+        <div class="form-group">
+          <label class="form-label">Durumu</label>
+          <select id="durumu" class="form-control">
+            <option value="">Seçiniz...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Faaliyet Planı</label>
+          <select id="faaliyet-plani" class="form-control">
+            <option value="">Seçiniz...</option>
+          </select>
+        </div>
         <div class="form-group" style="grid-column:1/-1">
-          <label class="form-label">Durum</label>
+          <label class="form-label">Aktif / Pasif</label>
           <div class="durum-toggle">
             <button type="button" id="btn-aktif" class="durum-btn secili-aktif" onclick="durumSec(true)">● Aktif</button>
             <button type="button" id="btn-pasif" class="durum-btn" onclick="durumSec(false)">○ Pasif</button>
@@ -554,6 +566,8 @@ function formKaydet(e) {
     iscilik:             document.getElementById('iscilik').value,
     teknolojiAlani:      document.getElementById('teknoloji-alani').value,
     urunGrubu:           document.getElementById('urun-grubu').value,
+    durumu:              document.getElementById('durumu').value,
+    faaliyetPlani:       document.getElementById('faaliyet-plani').value,
     aktif:               kayitAktif,
     trlHedefleri:        trlHedefleri.filter(h => h.hedef && h.tarih),
     iliskiler:           [...seciliIliskiler]
@@ -587,6 +601,8 @@ function sayfaBaslat() {
   dinamikSelectDoldur('tur',              'tur');
   dinamikSelectDoldur('teknoloji-alani',  'teknolojiAlani');
   dinamikSelectDoldur('urun-grubu',       'urunGrubu');
+  dinamikSelectDoldur('durumu',           'durumu');
+  dinamikSelectDoldur('faaliyet-plani',   'faaliyetPlani');
 
   const id = urlParam('id');
   if (id) {
@@ -619,6 +635,8 @@ function sayfaBaslat() {
     document.getElementById('iscilik').value            = kayit.iscilik || '';
     document.getElementById('teknoloji-alani').value    = kayit.teknolojiAlani || '';
     document.getElementById('urun-grubu').value         = kayit.urunGrubu || '';
+    document.getElementById('durumu').value             = kayit.durumu || '';
+    document.getElementById('faaliyet-plani').value     = kayit.faaliyetPlani || '';
 
     // Durum
     durumSec(kayit.aktif !== false);
