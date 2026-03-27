@@ -6,6 +6,7 @@
   <title>Sistem Konfigürasyonları</title>
   <script src="app.js"></script>
   <style id="sayfa-css"></style>
+  <script>document.getElementById('sayfa-css').textContent = ortakCSS();</script>
 </head>
 <body>
 
@@ -94,7 +95,7 @@
 </div>
 
 <script>
-document.getElementById('sayfa-css').textContent = ortakCSS() + `
+document.getElementById('sayfa-css').textContent += `
   .tab-bar-nav { display:flex;gap:3px;margin-left:20px; }
   .tab-link {
     padding:6px 14px;border-radius:8px;

@@ -6,6 +6,7 @@
   <title>Dış Destekli Proje Formu</title>
   <script src="app.js"></script>
   <style id="sayfa-css"></style>
+  <script>document.getElementById('sayfa-css').textContent = ortakCSS();</script>
 </head>
 <body>
 
@@ -120,7 +121,7 @@
 </div>
 
 <script>
-document.getElementById('sayfa-css').textContent = ortakCSS() + `
+document.getElementById('sayfa-css').textContent += `
   .bolum-baslik {
     font-size: 13px; font-weight: 700; color: var(--text2);
     text-transform: uppercase; letter-spacing: .6px;

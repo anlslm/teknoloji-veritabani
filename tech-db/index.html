@@ -6,6 +6,7 @@
   <title>Teknoloji Veritabanı — Kayıt Listesi</title>
   <script src="app.js"></script>
   <style id="sayfa-css"></style>
+  <script>document.getElementById('sayfa-css').textContent = ortakCSS();</script>
 </head>
 <body>
 
@@ -90,7 +91,7 @@
 </div>
 
 <script>
-document.getElementById('sayfa-css').textContent = ortakCSS() + `
+document.getElementById('sayfa-css').textContent += `
   .istatistik-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
