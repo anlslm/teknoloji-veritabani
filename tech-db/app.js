@@ -54,7 +54,19 @@ const VARSAYILAN_KONFIG = {
 function konfigGetir() {
   try {
     const stored = JSON.parse(localStorage.getItem(KONFIG_KEY));
-    if (stored && Array.isArray(stored.gruplar)) return stored;
+    if (stored && Array.isArray(stored.gruplar)) {
+      // Varsayılan config'de olup stored'da olmayan grupları ekle
+      const mevcutIdler = new Set(stored.gruplar.map(g => g.id));
+      let degisti = false;
+      VARSAYILAN_KONFIG.gruplar.forEach(g => {
+        if (!mevcutIdler.has(g.id)) {
+          stored.gruplar.push(JSON.parse(JSON.stringify(g)));
+          degisti = true;
+        }
+      });
+      if (degisti) localStorage.setItem(KONFIG_KEY, JSON.stringify(stored));
+      return stored;
+    }
   } catch {}
   return JSON.parse(JSON.stringify(VARSAYILAN_KONFIG));
 }
