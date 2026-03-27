@@ -52,6 +52,14 @@
             <option value="">Seçiniz...</option>
           </select>
         </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label class="form-label">Durum</label>
+          <div class="durum-toggle">
+            <button type="button" id="btn-aktif" class="durum-btn secili-aktif" onclick="durumSec(true)">● Aktif</button>
+            <button type="button" id="btn-pasif" class="durum-btn" onclick="durumSec(false)">○ Pasif</button>
+          </div>
+          <p id="durum-aciklama" class="trl-aciklama" style="margin-top:6px">Aktif kayıtlar yol haritasında görünür.</p>
+        </div>
       </div>
     </div>
 
@@ -99,6 +107,19 @@
       </div>
       <!-- TRL Görsel -->
       <div id="trl-gorsel" class="trl-gorsel"></div>
+    </div>
+
+    <!-- BÖLÜM 3.5: TRL MİLESTONES -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="bolum-baslik">TRL Milestones
+        <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;opacity:.55"> — opsiyonel</span>
+      </div>
+      <p style="color:var(--text2);font-size:13px;margin-bottom:14px">
+        Belirli bir tarihe kadar ulaşılması hedeflenen TRL seviyelerini tanımlayın.
+        Güncel TRL bu hedeflerin gerisinde kalırsa yol haritasında uyarı gösterilir.
+      </p>
+      <div id="trl-hedef-liste"></div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="trlHedefEkle()">+ Milestone Ekle</button>
     </div>
 
     <!-- BÖLÜM 4: MALİ -->
@@ -213,6 +234,32 @@ document.getElementById('sayfa-css').textContent = ortakCSS() + `
   .trl-kutu.hedef-ara  { background: #4f8ef718; border-color: #4f8ef750; color: #4f8ef7; }
   .trl-kutu.hedef      { background: #4fd97f25; border-color: #4fd97f; color: #4fd97f; }
 
+  /* Durum toggle */
+  .durum-toggle {
+    display: inline-flex;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .durum-btn {
+    padding: 7px 20px;
+    border: none;
+    background: var(--bg3);
+    color: var(--text2);
+    font-size: 13px; font-weight: 500;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+  }
+  .durum-btn.secili-aktif { background: var(--success); color: #000; font-weight: 600; }
+  .durum-btn.secili-pasif { background: var(--border); color: var(--text); font-weight: 600; }
+
+  /* TRL Milestone satırı */
+  .trl-milestone-satir {
+    display: flex; gap: 10px; align-items: center;
+    margin-bottom: 10px;
+  }
+  .trl-milestone-satir .form-control { flex: 1; }
+
   /* İlişki öneri kutusu */
   .iliski-oneri {
     position: absolute;
@@ -314,6 +361,62 @@ function trlGuncelle() {
     html += `<div class="trl-kutu ${sinif}">${i}</div>`;
   }
   gorsel.innerHTML = html;
+}
+
+// ──────────────────────────────────────────────
+//  Durum (Aktif / Pasif)
+// ──────────────────────────────────────────────
+let kayitAktif = true;
+
+function durumSec(aktif) {
+  kayitAktif = aktif;
+  document.getElementById('btn-aktif').className = 'durum-btn' + (aktif ? ' secili-aktif' : '');
+  document.getElementById('btn-pasif').className = 'durum-btn' + (!aktif ? ' secili-pasif' : '');
+  document.getElementById('durum-aciklama').textContent =
+    aktif ? 'Aktif kayıtlar yol haritasında görünür.'
+          : 'Pasif kayıtlar varsayılan olarak gizlenir, silinmez.';
+}
+
+// ──────────────────────────────────────────────
+//  TRL Milestones
+// ──────────────────────────────────────────────
+let trlHedefleri = []; // [{hedef: 5, tarih: '2025-06-01'}, ...]
+
+function trlHedefEkle() {
+  trlHedefleri.push({ hedef: '', tarih: '' });
+  trlHedefleriniRenderEt();
+}
+
+function trlHedefKaldir(i) {
+  trlHedefleri.splice(i, 1);
+  trlHedefleriniRenderEt();
+}
+
+function trlHedefGuncelle(i, alan, deger) {
+  if (alan === 'hedef') trlHedefleri[i].hedef = deger ? parseInt(deger, 10) : '';
+  else                  trlHedefleri[i].tarih = deger;
+}
+
+function trlHedefleriniRenderEt() {
+  const liste = document.getElementById('trl-hedef-liste');
+  if (!trlHedefleri.length) { liste.innerHTML = ''; return; }
+  liste.innerHTML = trlHedefleri.map((h, i) => `
+    <div class="trl-milestone-satir">
+      <select class="form-control" style="max-width:200px"
+              onchange="trlHedefGuncelle(${i},'hedef',this.value)">
+        <option value="">TRL Seçin...</option>
+        ${[1,2,3,4,5,6,7,8,9].map(n =>
+          `<option value="${n}" ${h.hedef == n ? 'selected' : ''}>TRL ${n} — ${TRL_ACIKLAMALARI[n]}</option>`
+        ).join('')}
+      </select>
+      <input type="date" class="form-control" style="max-width:180px"
+             value="${h.tarih}"
+             onchange="trlHedefGuncelle(${i},'tarih',this.value)">
+      <button type="button" class="btn btn-ghost btn-sm"
+              style="padding:6px 10px;color:var(--danger)"
+              onclick="trlHedefKaldir(${i})" title="Kaldır">×</button>
+    </div>
+  `).join('');
 }
 
 // ──────────────────────────────────────────────
@@ -451,6 +554,8 @@ function formKaydet(e) {
     iscilik:             document.getElementById('iscilik').value,
     teknolojiAlani:      document.getElementById('teknoloji-alani').value,
     urunGrubu:           document.getElementById('urun-grubu').value,
+    aktif:               kayitAktif,
+    trlHedefleri:        trlHedefleri.filter(h => h.hedef && h.tarih),
     iliskiler:           [...seciliIliskiler]
   };
 
@@ -514,6 +619,13 @@ function sayfaBaslat() {
     document.getElementById('iscilik').value            = kayit.iscilik || '';
     document.getElementById('teknoloji-alani').value    = kayit.teknolojiAlani || '';
     document.getElementById('urun-grubu').value         = kayit.urunGrubu || '';
+
+    // Durum
+    durumSec(kayit.aktif !== false);
+
+    // TRL Milestones
+    trlHedefleri = (kayit.trlHedefleri || []).map(h => ({ hedef: h.hedef, tarih: h.tarih }));
+    trlHedefleriniRenderEt();
 
     // İlişkiler
     seciliIliskiler = [...(kayit.iliskiler || [])];

@@ -221,6 +221,9 @@ function sayfaRenderEt() {
         <div class="detay-meta">
           ${turEtiketi(k.tur)}
           <span class="badge">${k.id}</span>
+          ${k.aktif === false
+            ? `<span class="badge" style="background:#e9456020;color:#e94560;border-color:#e9456040">Pasif</span>`
+            : `<span class="badge" style="background:#4fd97f20;color:#4fd97f;border-color:#4fd97f40">Aktif</span>`}
           <span style="color:var(--text2);font-size:12px">Sorumlu: ${k.sorumlu || '—'}</span>
         </div>
       </div>
@@ -286,6 +289,31 @@ function sayfaRenderEt() {
         <span style="color:#4fd97f">■</span> Hedef
       </div>
     </div>
+
+    <!-- TRL Milestones -->
+    ${(k.trlHedefleri && k.trlHedefleri.length > 0) ? (() => {
+      const bugun = new Date().toISOString().slice(0, 10);
+      const rows = k.trlHedefleri
+        .slice().sort((a, b) => a.tarih < b.tarih ? -1 : 1)
+        .map(h => {
+          const gecti  = h.tarih <= bugun;
+          const karsilanmis = gecti && (k.guncelTRL || k.baslangicTRL) >= h.hedef;
+          const gecikti = gecti && !karsilanmis;
+          let ikon = gecikti ? '⚠️' : (karsilanmis ? '✅' : '🎯');
+          let renk = gecikti ? '#e94560' : (karsilanmis ? '#4fd97f' : 'var(--text2)');
+          return `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)">
+            <span style="font-size:15px">${ikon}</span>
+            <span style="color:${renk};font-weight:700;font-size:14px">TRL ${h.hedef}</span>
+            <span style="color:var(--text2);font-size:13px">hedef tarih: ${tarihFormatla(h.tarih)}</span>
+            ${gecikti ? `<span style="color:#e94560;font-size:12px;font-weight:600">— GECİKMİŞ (Güncel: TRL ${k.guncelTRL || k.baslangicTRL})</span>` : ''}
+            ${karsilanmis ? `<span style="color:#4fd97f;font-size:12px;font-weight:600">— Karşılandı</span>` : ''}
+          </div>`;
+        }).join('');
+      return `<div class="card" style="margin-bottom:20px">
+        <div class="bolum-baslik">TRL Milestones</div>
+        ${rows}
+      </div>`;
+    })() : ''}
 
     <!-- İlişkili Kayıtlar -->
     <div class="card" style="margin-bottom:20px">

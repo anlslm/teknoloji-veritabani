@@ -121,6 +121,10 @@ function kayitEkle(veri) {
     iscilik: veri.iscilik.trim(),
     teknolojiAlani: veri.teknolojiAlani || '',
     urunGrubu: veri.urunGrubu || '',
+    aktif: veri.aktif !== undefined ? !!veri.aktif : true,
+    trlHedefleri: Array.isArray(veri.trlHedefleri)
+      ? veri.trlHedefleri.filter(h => h.hedef && h.tarih)
+      : [],
     iliskiler: [],
     olusturmaTarihi: simdi,
     guncellenmeTarihi: simdi
@@ -153,6 +157,10 @@ function kayitGuncelle(id, veri) {
     iscilik: veri.iscilik.trim(),
     teknolojiAlani: veri.teknolojiAlani || '',
     urunGrubu: veri.urunGrubu || '',
+    aktif: veri.aktif !== undefined ? !!veri.aktif : (kayitlar[idx].aktif !== false),
+    trlHedefleri: Array.isArray(veri.trlHedefleri)
+      ? veri.trlHedefleri.filter(h => h.hedef && h.tarih)
+      : (kayitlar[idx].trlHedefleri || []),
     guncellenmeTarihi: new Date().toISOString()
   };
   kayitlariKaydet(kayitlar);

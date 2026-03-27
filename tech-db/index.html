@@ -38,6 +38,11 @@
         <option>Sistem</option>
         <option>Komponent</option>
       </select>
+      <select id="aktif-filtre" class="form-control" style="max-width:160px">
+        <option value="">Tümü (Aktif+Pasif)</option>
+        <option value="aktif">Sadece Aktif</option>
+        <option value="pasif">Sadece Pasif</option>
+      </select>
       <select id="siralama" class="form-control" style="max-width:200px">
         <option value="id-asc">ID (Artan)</option>
         <option value="id-desc">ID (Azalan)</option>
@@ -207,6 +212,9 @@ function tabloRenderEt() {
 
   // Filtrele
   if (turF) kayitlar = kayitlar.filter(k => k.tur === turF);
+  const aktifF = document.getElementById('aktif-filtre').value;
+  if (aktifF === 'aktif') kayitlar = kayitlar.filter(k => k.aktif !== false);
+  if (aktifF === 'pasif') kayitlar = kayitlar.filter(k => k.aktif === false);
   if (arama) kayitlar = kayitlar.filter(k =>
     k.ad.toLowerCase().includes(arama) || k.id.toLowerCase().includes(arama)
   );
@@ -240,10 +248,12 @@ function tabloRenderEt() {
   tbody.innerHTML = kayitlar.map(k => {
     const trlRenk = k.baslangicTRL <= 3 ? '#e94560' : k.baslangicTRL <= 6 ? '#f7a44f' : '#4fd97f';
     const iliskiSayisi = (k.iliskiler || []).length;
-    return `<tr onclick="location.href='detail.html?id=${k.id}'" title="Detayı görüntüle">
+    const pasif = k.aktif === false;
+    return `<tr onclick="location.href='detail.html?id=${k.id}'" title="Detayı görüntüle"
+      style="${pasif ? 'opacity:.45;' : ''}">
       <td class="td-id">${k.id}</td>
-      <td>${turEtiketi(k.tur)}</td>
-      <td class="td-ad">${k.ad}</td>
+      <td>${turEtiketi(k.tur)}${pasif ? `&nbsp;<span class="badge" style="font-size:10px;background:#e9456018;color:#e94560;border-color:#e9456030">Pasif</span>` : ''}</td>
+      <td class="td-ad" style="${pasif ? 'text-decoration:line-through;text-decoration-color:rgba(255,255,255,.3)' : ''}">${k.ad}</td>
       <td>${k.sorumlu || '—'}</td>
       <td>
         <span class="trl-badge">
@@ -290,6 +300,7 @@ function modalKapat() {
 // Olay dinleyicileri
 document.getElementById('arama').addEventListener('input', tabloRenderEt);
 document.getElementById('tur-filtre').addEventListener('change', tabloRenderEt);
+document.getElementById('aktif-filtre').addEventListener('change', tabloRenderEt);
 document.getElementById('siralama').addEventListener('change', tabloRenderEt);
 
 // İlk yükleme
