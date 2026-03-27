@@ -18,6 +18,21 @@
   </div>
   <div class="navbar-spacer"></div>
   <div style="display:flex;gap:8px;align-items:center">
+
+    <!-- Sistem Filtresi -->
+    <div class="sistem-filtre" id="sistem-filtre">
+      <div class="sf-trigger" id="sf-trigger" onclick="sfToggle()">
+        <span id="sf-label">Tüm Sistemler</span>
+        <span class="sf-arrow" id="sf-arrow">▾</span>
+      </div>
+      <div class="sf-panel" id="sf-panel">
+        <input type="text" id="sf-arama" class="sf-arama"
+               placeholder="Sistem ara..." autocomplete="off"
+               oninput="sfFiltrele()">
+        <div class="sf-liste" id="sf-liste"></div>
+      </div>
+    </div>
+
     <span style="color:var(--text2);font-size:12px;font-weight:500">Ölçek:</span>
     <select id="zoom-sel" class="form-control"
             style="width:150px;padding:5px 8px;font-size:12px"
@@ -87,6 +102,48 @@ document.getElementById('sayfa-css').textContent = ortakCSS() + `
   .tab-link:hover { background: var(--bg3); color: var(--text); text-decoration: none; }
   .tab-link.active { background: var(--accent); color: #fff; }
 
+  /* ── Sistem Filtresi ── */
+  .sistem-filtre {
+    position: relative;
+  }
+  .sf-trigger {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 5px 12px;
+    font-size: 13px; font-weight: 500; color: var(--text);
+    cursor: pointer; user-select: none;
+    min-width: 160px;
+    transition: border-color .15s;
+  }
+  .sf-trigger:hover { border-color: var(--accent); }
+  .sf-trigger.aktif { border-color: var(--accent); color: var(--accent); }
+  .sf-arrow { margin-left: auto; font-size: 10px; color: var(--text2); transition: transform .15s; }
+  .sf-arrow.acik { transform: rotate(180deg); }
+  .sf-panel {
+    position: absolute; top: calc(100% + 6px); right: 0;
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); width: 240px;
+    box-shadow: 0 8px 28px rgba(0,0,0,.55);
+    z-index: 500; display: none;
+  }
+  .sf-panel.acik { display: block; }
+  .sf-arama {
+    width: 100%; background: var(--bg3); border: none;
+    border-bottom: 1px solid var(--border);
+    border-radius: var(--radius) var(--radius) 0 0;
+    color: var(--text); padding: 8px 12px;
+    font-size: 13px; font-family: inherit; outline: none;
+  }
+  .sf-liste { max-height: 220px; overflow-y: auto; }
+  .sf-item {
+    padding: 8px 12px; font-size: 13px; cursor: pointer;
+    color: var(--text2); transition: background .1s, color .1s;
+  }
+  .sf-item:hover { background: var(--bg3); color: var(--text); }
+  .sf-item.secili { color: var(--accent); font-weight: 600; }
+  .sf-item.sf-tumumu { border-bottom: 1px solid var(--border); color: var(--text); }
+  .sf-bos { padding: 10px 12px; font-size: 12px; color: var(--text2); text-align: center; }
+
   /* Sol panel */
   #left-panel {
     width: 160px; flex-shrink: 0;
@@ -99,12 +156,24 @@ document.getElementById('sayfa-css').textContent = ortakCSS() + `
   }
   .swim-label {
     display: flex; align-items: center;
-    padding: 0 16px;
+    padding: 0 12px 0 16px;
     font-size: 11px; font-weight: 700;
     text-transform: uppercase; letter-spacing: .7px;
     border-bottom: 1px solid var(--border);
     background: var(--bg2);
+    gap: 6px;
   }
+  .swim-label-text { flex: 1; }
+  .swim-toggle-btn {
+    flex-shrink: 0;
+    background: none; border: 1px solid transparent;
+    border-radius: 4px; cursor: pointer;
+    color: var(--text2); font-size: 11px;
+    padding: 1px 4px; line-height: 1;
+    transition: border-color .15s, color .15s;
+  }
+  .swim-toggle-btn:hover { border-color: var(--border); color: var(--text); }
+  .swim-label.ekstra-kapali { opacity: .55; }
 
   /* Timeline başlığı */
   #tl-header {
@@ -135,6 +204,8 @@ document.getElementById('sayfa-css').textContent = ortakCSS() + `
     border-bottom: 1px solid var(--border);
   }
   .swim-bg.alt { background: rgba(255,255,255,.012); }
+  .swim-bg.ekstra { background: rgba(255,255,255,.005); }
+  .swim-bg.ekstra-kapali { background: var(--bg3); opacity: .6; }
   .grid-ln {
     position: absolute; top: 0;
     width: 1px; background: rgba(255,255,255,.06);
@@ -149,6 +220,12 @@ document.getElementById('sayfa-css').textContent = ortakCSS() + `
     font-size: 9px; font-weight: 800; color: #e94560;
     white-space: nowrap; background: var(--bg2);
     padding: 1px 5px; border-radius: 3px;
+  }
+  .ekstra-placeholder {
+    position: absolute; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: rgba(255,255,255,.12);
+    font-style: italic; pointer-events: none;
   }
 
   /* Barlar */
@@ -220,6 +297,19 @@ document.getElementById('sayfa-css').textContent = ortakCSS() + `
 // ────────────────────────────────────────────────────
 // Swimlane sırası: her zaman sabit — Sistem üstte, Teknoloji altta
 const TUR_SIRASI = ['Sistem', 'Alt Sistem', 'Komponent', 'Teknoloji'];
+
+// Teknoloji altındaki ekstra swimlane'ler (boş, ilişkilendirilecek)
+const EKSTRA_SWINLANELER = [
+  { id: 'arge',      etiket: 'Ar-Ge Destekleri',   renk: '#9b6dff' },
+  { id: 'fikri',     etiket: 'Fikri Haklar',        renk: '#ff6db0' },
+  { id: 'inovasyon', etiket: 'İnovasyon Girdileri', renk: '#4fddcc' },
+];
+const EKSTRA_H_ACIK   = 72;   // açık boş lane yüksekliği
+const EKSTRA_H_KAPALI = 36;   // daraltılmış lane yüksekliği
+
+let gizliLaneler   = new Set();          // daraltılmış ekstra lane id'leri
+let aktifSistemId  = null;               // sistem filtresi
+
 const TR_AYLAR = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
 const TL_H     = 52;   // timeline başlığı yüksekliği
 const ROW_H    = 50;   // swimlane'deki satır yüksekliği
@@ -247,7 +337,7 @@ function todayX() {
 //  Kırmızı Bayrak: bağlı bileşen sistem gecikmesi
 // ────────────────────────────────────────────────────
 function hesaplaKirmiziBayraklar(kayitlar) {
-  const flags  = {};   // id → açıklama
+  const flags  = {};
   const lookup = {};
   kayitlar.forEach(k => { lookup[k.id] = k; });
 
@@ -261,7 +351,6 @@ function hesaplaKirmiziBayraklar(kayitlar) {
       const digerBitis = new Date(diger.gelistirmeBitis + 'T00:00:00');
 
       if (digerBitis > rBitis) {
-        // Bağlı öğe bu öğeden daha geç bitiyor → sistem gecikme riski
         if (!flags[r.id]) {
           flags[r.id] =
             `"${diger.ad}" (${diger.id}) bileşeninin bitiş tarihi ` +
@@ -284,9 +373,21 @@ function yenidenRenderEt() {
 
 function renderRoadmap() {
   const tumKayitlar = tumKayitlariGetir();
-  const kayitlar    = tumKayitlar.filter(k => k.gelistirmeBaslangic && k.gelistirmeBitis);
+  let kayitlar      = tumKayitlar.filter(k => k.gelistirmeBaslangic && k.gelistirmeBitis);
 
-  if (kayitlar.length === 0) {
+  // ── Sistem Filtresi ──
+  if (aktifSistemId) {
+    const seciliSistem = tumKayitlariGetir().find(k => k.id === aktifSistemId);
+    if (seciliSistem) {
+      const ilgiliIdler = new Set([aktifSistemId, ...(seciliSistem.iliskiler || [])]);
+      kayitlar = kayitlar.filter(k => ilgiliIdler.has(k.id));
+    }
+  }
+
+  // Filtre dropdown'ını Sistem kayıtlarıyla doldur
+  sfDoldur(tumKayitlar);
+
+  if (kayitlar.length === 0 && tumKayitlar.filter(k => k.gelistirmeBaslangic && k.gelistirmeBitis).length === 0) {
     document.getElementById('roadmap-main').style.display = 'none';
     document.getElementById('bos-durum').style.display   = 'flex';
     return;
@@ -294,11 +395,13 @@ function renderRoadmap() {
   document.getElementById('roadmap-main').style.display = 'flex';
   document.getElementById('bos-durum').style.display    = 'none';
 
+  // Filtrelenmiş sonuç boşsa tüm kayıtlarla devam et
+  if (kayitlar.length === 0) kayitlar = tumKayitlar.filter(k => k.gelistirmeBaslangic && k.gelistirmeBitis);
+
   // ── 1. Tarih aralığı ──────────────────────────────
   const minD = new Date(Math.min(...kayitlar.map(k => new Date(k.gelistirmeBaslangic + 'T00:00:00'))));
   const maxD = new Date(Math.max(...kayitlar.map(k => new Date(k.gelistirmeBitis    + 'T00:00:00'))));
 
-  // 1 ay padding her iki uca
   const rangeStart = new Date(minD.getFullYear(), minD.getMonth() - 1, 1);
   const rangeEnd   = new Date(maxD.getFullYear(), maxD.getMonth() + 2, 1);
 
@@ -323,10 +426,19 @@ function renderRoadmap() {
     swimHeights[tur]  = satirSayisi * ROW_H + 2 * SWIM_PAD;
     cumY += swimHeights[tur];
   });
+
+  // Ekstra swimlane'ler
+  const ekstraTops = {}, ekstraHeights = {};
+  EKSTRA_SWINLANELER.forEach(lane => {
+    ekstraTops[lane.id]    = cumY;
+    ekstraHeights[lane.id] = gizliLaneler.has(lane.id) ? EKSTRA_H_KAPALI : EKSTRA_H_ACIK;
+    cumY += ekstraHeights[lane.id];
+  });
+
   const totalH = cumY;
 
   // ── 3. Bar pozisyonları ───────────────────────────
-  const barPos = {};   // id → { x, y, w, h, cx, cy }
+  const barPos = {};
   TUR_SIRASI.forEach(tur => {
     grouped[tur].forEach((k, i) => {
       const x  = dateToX(k.gelistirmeBaslangic);
@@ -342,24 +454,38 @@ function renderRoadmap() {
   const bayraklar = hesaplaKirmiziBayraklar(kayitlar);
 
   // ── 5. Render adımları ────────────────────────────
-  renderLeftPanel(swimTops, swimHeights);
+  renderLeftPanel(swimTops, swimHeights, ekstraTops, ekstraHeights);
   renderTimeline(totalMonths, totalW);
-  renderContentArea(totalW, totalH, totalMonths, swimTops, swimHeights);
+  renderContentArea(totalW, totalH, totalMonths, swimTops, swimHeights, ekstraTops, ekstraHeights);
   renderBars(kayitlar, barPos, bayraklar);
   renderConnections(kayitlar, barPos);
 }
 
 // ────────────────────────────────────────────────────
-function renderLeftPanel(swimTops, swimHeights) {
+function renderLeftPanel(swimTops, swimHeights, ekstraTops, ekstraHeights) {
   document.getElementById('lp-spacer').style.height = TL_H + 'px';
-  document.getElementById('lp-lanes').innerHTML =
-    TUR_SIRASI.map(tur => {
-      const renk = turRenkGetir(tur);
-      return `<div class="swim-label"
-        style="height:${swimHeights[tur]}px;border-left:3px solid ${renk};color:${renk}">
-        ${tur}
-      </div>`;
-    }).join('');
+
+  const turHtml = TUR_SIRASI.map(tur => {
+    const renk = turRenkGetir(tur);
+    return `<div class="swim-label"
+      style="height:${swimHeights[tur]}px;border-left:3px solid ${renk};color:${renk}">
+      <span class="swim-label-text">${tur}</span>
+    </div>`;
+  }).join('');
+
+  const ekstraHtml = EKSTRA_SWINLANELER.map(lane => {
+    const kapali = gizliLaneler.has(lane.id);
+    return `<div class="swim-label ${kapali ? 'ekstra-kapali' : ''}"
+      style="height:${ekstraHeights[lane.id]}px;border-left:3px solid ${lane.renk};color:${lane.renk}">
+      <span class="swim-label-text">${lane.etiket}</span>
+      <button class="swim-toggle-btn"
+              title="${kapali ? 'Göster' : 'Gizle'}"
+              onclick="toggleLane('${lane.id}')"
+              style="color:${lane.renk}88">${kapali ? '▶' : '▼'}</button>
+    </div>`;
+  }).join('');
+
+  document.getElementById('lp-lanes').innerHTML = turHtml + ekstraHtml;
 }
 
 // ────────────────────────────────────────────────────
@@ -367,7 +493,6 @@ function renderTimeline(totalMonths, totalW) {
   const hdr = document.getElementById('tl-header');
   hdr.style.height = TL_H + 'px';
 
-  // Yıl satırı
   const years = [];
   let prevYr = null;
   for (let i = 0; i < totalMonths; i++) {
@@ -380,7 +505,6 @@ function renderTimeline(totalMonths, totalW) {
     `<div class="tl-year-cell" style="width:${y.count * MONTH_W}px">${y.year}</div>`
   ).join('');
 
-  // Ay satırı
   const today = new Date();
   let moRow = '';
   for (let i = 0; i < totalMonths; i++) {
@@ -397,7 +521,7 @@ function renderTimeline(totalMonths, totalW) {
 }
 
 // ────────────────────────────────────────────────────
-function renderContentArea(totalW, totalH, totalMonths, swimTops, swimHeights) {
+function renderContentArea(totalW, totalH, totalMonths, swimTops, swimHeights, ekstraTops, ekstraHeights) {
   const ca   = document.getElementById('content-area');
   const svg  = document.getElementById('conn-svg');
   const bars = document.getElementById('bars-layer');
@@ -410,10 +534,9 @@ function renderContentArea(totalW, totalH, totalMonths, swimTops, swimHeights) {
   svg.style.height = totalH + 'px';
   while (svg.firstChild) svg.removeChild(svg.firstChild);
 
-  // Eski statik elemanları temizle (barlar dışında)
-  bars.querySelectorAll('.swim-bg,.grid-ln').forEach(el => el.remove());
+  bars.querySelectorAll('.swim-bg,.grid-ln,.ekstra-placeholder').forEach(el => el.remove());
 
-  // Swimlane arka planları
+  // TÜR swimlane arka planları
   TUR_SIRASI.forEach((tur, i) => {
     const d = document.createElement('div');
     d.className = 'swim-bg' + (i % 2 === 1 ? ' alt' : '');
@@ -423,16 +546,36 @@ function renderContentArea(totalW, totalH, totalMonths, swimTops, swimHeights) {
     bars.appendChild(d);
   });
 
+  // Ekstra swimlane arka planları
+  EKSTRA_SWINLANELER.forEach(lane => {
+    const kapali = gizliLaneler.has(lane.id);
+    const d = document.createElement('div');
+    d.className = 'swim-bg ekstra' + (kapali ? ' ekstra-kapali' : '');
+    d.style.top    = ekstraTops[lane.id]    + 'px';
+    d.style.width  = totalW                 + 'px';
+    d.style.height = ekstraHeights[lane.id] + 'px';
+    bars.appendChild(d);
+
+    // Açık boş lane'lerde placeholder metin
+    if (!kapali) {
+      const ph = document.createElement('div');
+      ph.className  = 'ekstra-placeholder';
+      ph.textContent = `— ${lane.etiket} henüz ilişkilendirilmedi —`;
+      ph.style.top  = ekstraTops[lane.id] + 'px';
+      ph.style.height = ekstraHeights[lane.id] + 'px';
+      bars.appendChild(ph);
+    }
+  });
+
   // Dikey grid çizgileri + bugün
   const todXX = todayX();
   for (let i = 0; i <= totalMonths; i++) {
     const totalM = baseMonth + i;
     const mo  = totalM % 12;
-    const x   = i * MONTH_W;
 
     const ln = document.createElement('div');
     ln.className = 'grid-ln' + (mo === 0 ? ' yr' : '');
-    ln.style.left   = x + 'px';
+    ln.style.left   = (i * MONTH_W) + 'px';
     ln.style.height = totalH + 'px';
     bars.appendChild(ln);
   }
@@ -470,7 +613,6 @@ function renderBars(kayitlar, barPos, bayraklar) {
     bar.style.borderColor  = renk;
     bar.style.zIndex       = '3';
 
-    // Güncel TRL ilerleme çubuğu (yüzde)
     const trlAralik = (k.hedeflenenTRL || 9) - (k.baslangicTRL || 1);
     const trlIlerleme = k.guncelTRL && trlAralik > 0
       ? Math.round(((k.guncelTRL - k.baslangicTRL) / trlAralik) * 100)
@@ -507,7 +649,6 @@ function renderConnections(kayitlar, barPos) {
   const lookup = {};
   kayitlar.forEach(k => { lookup[k.id] = k; });
 
-  // SVG defs (ok ucu)
   const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
   defs.innerHTML = `
     <marker id="arr" markerWidth="7" markerHeight="5"
@@ -532,7 +673,6 @@ function renderConnections(kayitlar, barPos) {
       const posO = barPos[lid];
       if (!posO) return;
 
-      // Yön: hangisi daha solda (daha erken) → sağa bağlanır
       let x1, y1, x2, y2;
       if (posR.cx <= posO.cx) {
         x1 = posR.x + posR.w; y1 = posR.cy;
@@ -553,7 +693,6 @@ function renderConnections(kayitlar, barPos) {
       path.setAttribute('stroke-dasharray','5,4');
       path.setAttribute('marker-end',      'url(#arr)');
 
-      // Hover ile bağlantıyı öne çıkar
       path.addEventListener('mouseenter', () => {
         path.setAttribute('stroke', 'rgba(255,255,255,0.6)');
         path.setAttribute('stroke-width', '2.5');
@@ -567,6 +706,89 @@ function renderConnections(kayitlar, barPos) {
     });
   });
 }
+
+// ────────────────────────────────────────────────────
+//  Ekstra Lane Toggle
+// ────────────────────────────────────────────────────
+function toggleLane(laneId) {
+  if (gizliLaneler.has(laneId)) {
+    gizliLaneler.delete(laneId);
+  } else {
+    gizliLaneler.add(laneId);
+  }
+  renderRoadmap();
+}
+
+// ────────────────────────────────────────────────────
+//  Sistem Filtresi
+// ────────────────────────────────────────────────────
+let sfAcik = false;
+let sfKayitlar = [];   // Sistem türündeki kayıtlar (önbellek)
+
+function sfDoldur(tumKayitlar) {
+  sfKayitlar = tumKayitlar.filter(k => k.tur === 'Sistem');
+  sfListeRenderEt('');
+}
+
+function sfListeRenderEt(aramaMetni) {
+  const liste = document.getElementById('sf-liste');
+  if (!liste) return;
+
+  const filtre = aramaMetni.trim().toLowerCase();
+  const sonuclar = filtre
+    ? sfKayitlar.filter(k => k.ad.toLowerCase().includes(filtre) || k.id.toLowerCase().includes(filtre))
+    : sfKayitlar;
+
+  let html = `<div class="sf-item sf-tumumu ${!aktifSistemId ? 'secili' : ''}"
+    onclick="sfSec(null, 'Tüm Sistemler')">Tüm Sistemler</div>`;
+
+  if (sonuclar.length === 0) {
+    html += `<div class="sf-bos">Sistem bulunamadı</div>`;
+  } else {
+    html += sonuclar.map(k =>
+      `<div class="sf-item ${aktifSistemId === k.id ? 'secili' : ''}"
+         onclick="sfSec('${k.id}', '${k.ad.replace(/'/g, "\\'")}')">
+        <span style="font-family:monospace;font-size:10px;opacity:.5;margin-right:6px">${k.id}</span>${k.ad}
+      </div>`
+    ).join('');
+  }
+
+  liste.innerHTML = html;
+}
+
+function sfToggle() {
+  sfAcik = !sfAcik;
+  document.getElementById('sf-panel').classList.toggle('acik', sfAcik);
+  document.getElementById('sf-arrow').classList.toggle('acik', sfAcik);
+  if (sfAcik) {
+    setTimeout(() => document.getElementById('sf-arama').focus(), 50);
+    sfListeRenderEt('');
+  }
+}
+
+function sfFiltrele() {
+  sfListeRenderEt(document.getElementById('sf-arama').value);
+}
+
+function sfSec(id, ad) {
+  aktifSistemId = id;
+  document.getElementById('sf-label').textContent = ad;
+  document.getElementById('sf-trigger').classList.toggle('aktif', !!id);
+  document.getElementById('sf-arama').value = '';
+  sfAcik = false;
+  document.getElementById('sf-panel').classList.remove('acik');
+  document.getElementById('sf-arrow').classList.remove('acik');
+  renderRoadmap();
+}
+
+// Panel dışı tıkla kapat
+document.addEventListener('click', e => {
+  if (sfAcik && !document.getElementById('sistem-filtre').contains(e.target)) {
+    sfAcik = false;
+    document.getElementById('sf-panel').classList.remove('acik');
+    document.getElementById('sf-arrow').classList.remove('acik');
+  }
+});
 
 // ────────────────────────────────────────────────────
 //  Tooltip
