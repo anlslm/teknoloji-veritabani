@@ -9,25 +9,20 @@
 </head>
 <body>
 
-<nav class="navbar">
-  <span class="navbar-brand">Teknoloji <span>Veritabanı</span></span>
-  <div class="tab-bar-nav">
-    <a href="index.html"   class="tab-link">📋 Kayıt Listesi</a>
-    <a href="roadmap.html" class="tab-link">🗺️ Yol Haritası</a>
-    <a href="config.html"  class="tab-link active">⚙️ Konfigürasyon</a>
-  </div>
-  <div class="navbar-spacer"></div>
-</nav>
+<script>document.body.insertAdjacentHTML('afterbegin', sidebarHTML('config.html'));</script>
+
+<div class="main-wrap">
+<div class="topbar">
+  <span class="topbar-title">Sistem Konfigürasyonları</span>
+  <div class="topbar-spacer"></div>
+</div>
 
 <main style="max-width:860px;margin:0 auto;padding:28px 24px">
 
-  <div style="margin-bottom:28px">
-    <h1 style="font-size:22px;font-weight:700;margin-bottom:6px">Sistem Konfigürasyonları</h1>
-    <p style="color:var(--text2);font-size:14px">
-      Teknoloji Tanımlama Formu'nda kullanılan seçenek listelerini ve değişken gruplarını yönetin.
-      Değişiklikler anında kaydedilir.
-    </p>
-  </div>
+  <p style="color:var(--text2);font-size:14px;margin-bottom:28px">
+    Teknoloji Tanımlama Formu'nda kullanılan seçenek listelerini ve değişken gruplarını yönetin.
+    Değişiklikler anında kaydedilir.
+  </p>
 
   <div id="bildirim" class="alert alert-success" style="display:none"></div>
 
@@ -490,5 +485,6 @@ function modalKapat() {
 renderGruplar();
 renderYeniGrupSecenekler();
 </script>
+</div><!-- /.main-wrap -->
 </body>
 </html>

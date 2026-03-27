@@ -329,32 +329,65 @@ function ortakCSS() {
       color: var(--text);
       min-height: 100vh;
       font-size: 14px;
+      display: flex;
     }
 
     a { color: var(--accent); text-decoration: none; }
     a:hover { text-decoration: underline; }
 
-    /* Navbar */
-    .navbar {
+    /* ── Dikey Sidebar ── */
+    .sidebar {
+      width: 210px; flex-shrink: 0;
+      height: 100vh; position: fixed; left: 0; top: 0;
       background: var(--bg2);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      z-index: 200;
+      overflow-y: auto;
+    }
+    .sidebar-brand {
+      padding: 18px 16px 16px;
+      font-size: 15px; font-weight: 700;
+      color: var(--text); letter-spacing: .3px;
       border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .sidebar-brand span { color: var(--accent); }
+    .sidebar-section {
+      padding: 12px 8px 4px;
+      font-size: 10px; font-weight: 700;
+      color: var(--text2); text-transform: uppercase;
+      letter-spacing: .8px; padding-left: 14px;
+    }
+    .sidebar-nav { flex: 1; padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+    .sidebar-link {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: 8px;
+      font-size: 13px; font-weight: 500;
+      color: var(--text2); text-decoration: none;
+      transition: background .15s, color .15s;
+    }
+    .sidebar-link:hover { background: var(--bg3); color: var(--text); text-decoration: none; }
+    .sidebar-link.active { background: var(--accent); color: #fff; }
+    .sidebar-link .sl-icon { font-size: 15px; line-height: 1; }
+
+    /* ── Ana İçerik Alanı ── */
+    .main-wrap {
+      margin-left: 210px;
+      flex: 1;
+      display: flex; flex-direction: column;
+      min-height: 100vh;
+      min-width: 0;
+    }
+    .topbar {
+      height: 56px; flex-shrink: 0;
+      background: var(--bg2); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 12px;
       padding: 0 24px;
-      height: 56px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      position: sticky;
-      top: 0;
-      z-index: 100;
+      position: sticky; top: 0; z-index: 100;
     }
-    .navbar-brand {
-      font-weight: 700;
-      font-size: 16px;
-      color: var(--text);
-      letter-spacing: 0.5px;
-    }
-    .navbar-brand span { color: var(--accent); }
-    .navbar-spacer { flex: 1; }
+    .topbar-title { font-size: 15px; font-weight: 600; color: var(--text); }
+    .topbar-spacer { flex: 1; }
 
     /* Butonlar */
     .btn {
@@ -460,4 +493,105 @@ function ortakCSS() {
     ::-webkit-scrollbar-track { background: var(--bg); }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
   `;
+}
+
+// ──────────────────────────────────────────────
+//  Paylaşımlı Sidebar HTML
+// ──────────────────────────────────────────────
+
+function sidebarHTML(aktifSayfa) {
+  const linkler = [
+    { href: 'index.html',   ikon: '📋', etiket: 'Kayıt Listesi' },
+    { href: 'roadmap.html', ikon: '🗺️', etiket: 'Yol Haritası' },
+    { href: 'ddp.html',     ikon: '💼', etiket: 'Dış Destekli Projeler' },
+    { href: 'config.html',  ikon: '⚙️', etiket: 'Konfigürasyon' },
+  ];
+  const linkHTML = linkler.map(l =>
+    `<a href="${l.href}" class="sidebar-link ${aktifSayfa === l.href ? 'active' : ''}">
+      <span class="sl-icon">${l.ikon}</span>${l.etiket}
+    </a>`
+  ).join('');
+  return `
+    <div class="sidebar">
+      <div class="sidebar-brand">Teknoloji <span>Veritabanı</span></div>
+      <nav class="sidebar-nav">${linkHTML}</nav>
+    </div>
+  `;
+}
+
+// ──────────────────────────────────────────────
+//  DDP — Dış Destekli Projeler
+// ──────────────────────────────────────────────
+
+const DDP_KEY   = 'techdb_ddp_kayitlar';
+const DDP_SAYAC = 'techdb_ddp_sayac';
+
+const FON_SAGLAYICILAR = ['TÜBİTAK', 'SSB', 'Diğer'];
+
+function ddpKayitlariGetir() {
+  try { return JSON.parse(localStorage.getItem(DDP_KEY)) || []; }
+  catch { return []; }
+}
+
+function ddpKayitlariKaydet(dizi) {
+  localStorage.setItem(DDP_KEY, JSON.stringify(dizi));
+}
+
+function ddpIdUret() {
+  let sayac = parseInt(localStorage.getItem(DDP_SAYAC) || '0', 10) + 1;
+  localStorage.setItem(DDP_SAYAC, String(sayac));
+  return 'DDP-' + String(sayac).padStart(4, '0');
+}
+
+function ddpIdIleGetir(id) {
+  return ddpKayitlariGetir().find(k => k.id === id) || null;
+}
+
+function ddpEkle(veri) {
+  const kayitlar = ddpKayitlariGetir();
+  const simdi    = new Date().toISOString();
+  const yeni = {
+    id:              ddpIdUret(),
+    ad:              veri.ad.trim(),
+    basvuruTarihi:   veri.basvuruTarihi  || '',
+    baslangicTarihi: veri.baslangicTarihi || '',
+    bitisTarihi:     veri.bitisTarihi    || '',
+    toplamButce:     parseFloat(veri.toplamButce)  || 0,
+    hibeTutari:      parseFloat(veri.hibeTutari)   || 0,
+    fonSaglayici:    veri.fonSaglayici   || '',
+    program:         (veri.program       || '').trim(),
+    fikiriHakPaylasimi: (veri.fikiriHakPaylasimi || '').trim(),
+    iliskiliKayitlar: veri.iliskiliKayitlar || [],
+    olusturmaTarihi:  simdi,
+    guncellenmeTarihi: simdi
+  };
+  kayitlar.push(yeni);
+  ddpKayitlariKaydet(kayitlar);
+  return yeni.id;
+}
+
+function ddpGuncelle(id, veri) {
+  const kayitlar = ddpKayitlariGetir();
+  const idx = kayitlar.findIndex(k => k.id === id);
+  if (idx === -1) return false;
+  kayitlar[idx] = {
+    ...kayitlar[idx],
+    ad:              veri.ad.trim(),
+    basvuruTarihi:   veri.basvuruTarihi  || '',
+    baslangicTarihi: veri.baslangicTarihi || '',
+    bitisTarihi:     veri.bitisTarihi    || '',
+    toplamButce:     parseFloat(veri.toplamButce)  || 0,
+    hibeTutari:      parseFloat(veri.hibeTutari)   || 0,
+    fonSaglayici:    veri.fonSaglayici   || '',
+    program:         (veri.program       || '').trim(),
+    fikiriHakPaylasimi: (veri.fikiriHakPaylasimi || '').trim(),
+    iliskiliKayitlar: veri.iliskiliKayitlar || [],
+    guncellenmeTarihi: new Date().toISOString()
+  };
+  ddpKayitlariKaydet(kayitlar);
+  return true;
+}
+
+function ddpSil(id) {
+  ddpKayitlariKaydet(ddpKayitlariGetir().filter(k => k.id !== id));
 }

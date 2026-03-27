@@ -9,12 +9,15 @@
 </head>
 <body>
 
-<nav class="navbar">
-  <a href="index.html" class="btn btn-ghost btn-sm" style="text-decoration:none">← Listeye Dön</a>
-  <span id="nav-id" class="badge" style="margin-left:8px"></span>
-  <div class="navbar-spacer"></div>
+<script>document.body.insertAdjacentHTML('afterbegin', sidebarHTML('index.html'));</script>
+
+<div class="main-wrap">
+<div class="topbar">
+  <button class="btn btn-ghost btn-sm" onclick="location.href='index.html'">← Listeye Dön</button>
+  <span id="nav-id" class="badge" style="margin-left:4px"></span>
+  <div class="topbar-spacer"></div>
   <button class="btn btn-ghost btn-sm" id="duzenle-btn" onclick="duzenleGit()">✏️ Düzenle</button>
-</nav>
+</div>
 
 <main style="max-width:960px;margin:0 auto;padding:28px 24px" id="icerik">
   <div class="empty-state">
@@ -355,5 +358,6 @@ function sayfaRenderEt() {
 
 sayfaRenderEt();
 </script>
+</div><!-- /.main-wrap -->
 </body>
 </html>

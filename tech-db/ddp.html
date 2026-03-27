@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dış Destekli Projeler</title>
+  <script src="app.js"></script>
+  <style id="sayfa-css"></style>
+</head>
+<body>
+
+<script>document.body.insertAdjacentHTML('afterbegin', sidebarHTML('ddp.html'));</script>
+
+<div class="main-wrap">
+  <div class="topbar">
+    <span class="topbar-title">Dış Destekli Projeler</span>
+    <div class="topbar-spacer"></div>
+    <button class="btn btn-primary" onclick="location.href='ddp-form.html'">+ Yeni Proje</button>
+  </div>
+
+  <main style="max-width:1300px;margin:0 auto;padding:28px 24px">
+
+    <!-- İstatistik Kartları -->
+    <div id="istatistik-alani" class="ddp-istat-grid"></div>
+
+    <!-- Filtre Çubuğu -->
+    <div class="card" style="margin-bottom:20px;padding:14px 20px">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <input type="text" id="arama" class="form-control"
+               placeholder="Ad veya ID ile ara..." style="max-width:260px">
+        <select id="fon-filtre" class="form-control" style="max-width:180px">
+          <option value="">Tüm Fon Sağlayıcılar</option>
+          <option>TÜBİTAK</option>
+          <option>SSB</option>
+          <option>Diğer</option>
+        </select>
+        <span id="sonuc-sayisi" style="color:var(--text2);font-size:13px;margin-left:auto"></span>
+      </div>
+    </div>
+
+    <!-- Tablo -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>KOD</th>
+              <th>PROJE ADI</th>
+              <th>FON SAĞLAYICI</th>
+              <th>PROGRAM</th>
+              <th>BAŞVURU TARİHİ</th>
+              <th>BAŞLANGIÇ</th>
+              <th>BİTİŞ</th>
+              <th>HİBE TUTARI</th>
+              <th>İLİŞKİLİ KAYITLAR</th>
+              <th style="text-align:center">İŞLEMLER</th>
+            </tr>
+          </thead>
+          <tbody id="tablo-govde"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Silme Onay Modalı -->
+<div id="modal-overlay" class="modal-overlay" style="display:none" onclick="modalKapat()">
+  <div class="modal-kutu" onclick="event.stopPropagation()">
+    <div class="modal-baslik">Projeyi Sil</div>
+    <p id="modal-mesaj" style="color:var(--text2);margin-bottom:20px;font-size:14px"></p>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="modalKapat()">İptal</button>
+      <button class="btn btn-danger" id="modal-onay-btn">Sil</button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('sayfa-css').textContent = ortakCSS() + `
+  .ddp-istat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px; margin-bottom: 20px;
+  }
+  .istat-kart {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px 20px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .istat-sayi  { font-size: 28px; font-weight: 700; }
+  .istat-etiket { font-size: 11px; color: var(--text2); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    background: var(--bg3); padding: 11px 16px;
+    text-align: left; font-size: 11px; font-weight: 700;
+    color: var(--text2); text-transform: uppercase;
+    letter-spacing: .5px; border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .12s; cursor: pointer; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--bg3); }
+  tbody td { padding: 12px 16px; font-size: 13px; vertical-align: middle; }
+  .td-id { font-family: monospace; font-size: 12px; color: var(--text2); font-weight: 600; }
+  .td-ad { font-weight: 500; max-width: 240px; }
+  .islem-butonlar { display: flex; gap: 6px; justify-content: center; }
+
+  .fon-etiket {
+    display: inline-block; padding: 2px 10px;
+    border-radius: 20px; font-size: 12px; font-weight: 600;
+  }
+
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.6);
+    display: flex; align-items: center; justify-content: center; z-index: 999;
+  }
+  .modal-kutu {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 14px; padding: 28px; width: 400px; max-width: 90vw;
+  }
+  .modal-baslik { font-size: 16px; font-weight: 700; margin-bottom: 10px; }
+`;
+
+const FON_RENKLER = {
+  'TÜBİTAK': '#4f8ef7',
+  'SSB':      '#9b6dff',
+  'Diğer':    '#8b93b3',
+};
+
+function fonEtiketi(fon) {
+  const renk = FON_RENKLER[fon] || '#8b93b3';
+  return `<span class="fon-etiket" style="background:${renk}20;color:${renk};border:1px solid ${renk}40">${fon || '—'}</span>`;
+}
+
+function istatistikRenderEt(kayitlar) {
+  const toplam     = kayitlar.length;
+  const toplamHibe = kayitlar.reduce((s, k) => s + (k.hibeTutari || 0), 0);
+  const toplamBut  = kayitlar.reduce((s, k) => s + (k.toplamButce || 0), 0);
+
+  const fonSayilari = {};
+  FON_SAGLAYICILAR.forEach(f => { fonSayilari[f] = 0; });
+  kayitlar.forEach(k => { if (fonSayilari[k.fonSaglayici] !== undefined) fonSayilari[k.fonSaglayici]++; });
+
+  let html = `
+    <div class="istat-kart">
+      <span class="istat-sayi">${toplam}</span>
+      <span class="istat-etiket">Toplam Proje</span>
+    </div>
+    <div class="istat-kart" style="border-left:3px solid #4fd97f">
+      <span class="istat-sayi" style="color:#4fd97f;font-size:20px">${butceFormatla(toplamHibe)}</span>
+      <span class="istat-etiket">Toplam Hibe</span>
+    </div>
+    <div class="istat-kart" style="border-left:3px solid #f7a44f">
+      <span class="istat-sayi" style="color:#f7a44f;font-size:20px">${butceFormatla(toplamBut)}</span>
+      <span class="istat-etiket">Toplam Bütçe</span>
+    </div>
+  `;
+  FON_SAGLAYICILAR.forEach(f => {
+    const renk = FON_RENKLER[f] || '#8b93b3';
+    html += `<div class="istat-kart" style="border-left:3px solid ${renk}">
+      <span class="istat-sayi" style="color:${renk}">${fonSayilari[f]}</span>
+      <span class="istat-etiket">${f}</span>
+    </div>`;
+  });
+  document.getElementById('istatistik-alani').innerHTML = html;
+}
+
+function tabloRenderEt() {
+  const arama  = document.getElementById('arama').value.toLowerCase();
+  const fonF   = document.getElementById('fon-filtre').value;
+  let kayitlar = ddpKayitlariGetir();
+
+  istatistikRenderEt(kayitlar);
+
+  if (fonF) kayitlar = kayitlar.filter(k => k.fonSaglayici === fonF);
+  if (arama) kayitlar = kayitlar.filter(k =>
+    k.ad.toLowerCase().includes(arama) || k.id.toLowerCase().includes(arama) ||
+    (k.program || '').toLowerCase().includes(arama)
+  );
+
+  document.getElementById('sonuc-sayisi').textContent = `${kayitlar.length} proje`;
+
+  const tbody = document.getElementById('tablo-govde');
+  if (kayitlar.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="10">
+      <div class="empty-state">
+        <div class="empty-state-icon">💼</div>
+        <div class="empty-state-text">Dış destekli proje kaydı bulunamadı</div>
+        <div class="empty-state-sub">Yeni proje ekleyin veya filtre kriterlerini değiştirin.</div>
+      </div>
+    </td></tr>`;
+    return;
+  }
+
+  const techKayitlar = tumKayitlariGetir();
+  const techLookup   = {};
+  techKayitlar.forEach(k => { techLookup[k.id] = k; });
+
+  tbody.innerHTML = kayitlar.map(k => {
+    const iliskiSayisi = (k.iliskiliKayitlar || []).length;
+    return `<tr onclick="location.href='ddp-form.html?id=${k.id}'" title="Projeyi düzenle">
+      <td class="td-id">${k.id}</td>
+      <td class="td-ad">${k.ad}</td>
+      <td>${fonEtiketi(k.fonSaglayici)}</td>
+      <td style="color:var(--text2)">${k.program || '—'}</td>
+      <td>${tarihFormatla(k.basvuruTarihi)}</td>
+      <td>${tarihFormatla(k.baslangicTarihi)}</td>
+      <td>${tarihFormatla(k.bitisTarihi)}</td>
+      <td style="color:#4fd97f;font-weight:600">${butceFormatla(k.hibeTutari)}</td>
+      <td>${iliskiSayisi > 0
+        ? `<span class="badge">${iliskiSayisi} kayıt</span>`
+        : `<span style="color:var(--text2)">—</span>`}</td>
+      <td onclick="event.stopPropagation()">
+        <div class="islem-butonlar">
+          <button class="btn btn-ghost btn-sm" onclick="location.href='ddp-form.html?id=${k.id}'">Düzenle</button>
+          <button class="btn btn-danger btn-sm" onclick="silOnay('${k.id}','${k.ad.replace(/'/g,"\\'")}')">Sil</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function silOnay(id, ad) {
+  document.getElementById('modal-mesaj').textContent =
+    `"${ad}" (${id}) projesini kalıcı olarak silmek istediğinize emin misiniz?`;
+  document.getElementById('modal-onay-btn').onclick = () => {
+    ddpSil(id);
+    modalKapat();
+    tabloRenderEt();
+  };
+  document.getElementById('modal-overlay').style.display = 'flex';
+}
+
+function modalKapat() {
+  document.getElementById('modal-overlay').style.display = 'none';
+}
+
+document.getElementById('arama').addEventListener('input', tabloRenderEt);
+document.getElementById('fon-filtre').addEventListener('change', tabloRenderEt);
+
+tabloRenderEt();
+</script>
+</body>
+</html>

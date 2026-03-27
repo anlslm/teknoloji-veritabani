@@ -9,14 +9,12 @@
 </head>
 <body>
 
-<nav class="navbar">
-  <span class="navbar-brand">Teknoloji <span>Veritabanı</span></span>
-  <div class="tab-bar-nav">
-    <a href="index.html"   class="tab-link">📋 Kayıt Listesi</a>
-    <a href="roadmap.html" class="tab-link active">🗺️ Yol Haritası</a>
-    <a href="config.html"  class="tab-link">⚙️ Konfigürasyon</a>
-  </div>
-  <div class="navbar-spacer"></div>
+<script>document.body.insertAdjacentHTML('afterbegin', sidebarHTML('roadmap.html'));</script>
+
+<div class="main-wrap" style="overflow:hidden">
+<div class="topbar">
+  <span class="topbar-title">Yol Haritası</span>
+  <div class="topbar-spacer"></div>
   <div style="display:flex;gap:8px;align-items:center">
     <span style="color:var(--text2);font-size:12px;font-weight:500">Ölçek:</span>
     <select id="zoom-sel" class="form-control"
@@ -29,7 +27,7 @@
     <button class="btn btn-ghost btn-sm" onclick="bugunKaydır()">◎ Bugün</button>
     <button class="btn btn-primary btn-sm" onclick="location.href='form.html'">+ Yeni Kayıt</button>
   </div>
-</nav>
+</div>
 
 <!-- Filtre Çubuğu -->
 <div id="filtre-cubugu">
@@ -1000,5 +998,6 @@ window.addEventListener('resize', () => {
   rzTimer = setTimeout(renderRoadmap, 180);
 });
 </script>
+</div><!-- /.main-wrap -->
 </body>
 </html>
