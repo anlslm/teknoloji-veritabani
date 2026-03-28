@@ -7,6 +7,7 @@
   <script src="app.js"></script>
   <style id="sayfa-css"></style>
   <script>document.getElementById('sayfa-css').textContent = ortakCSS();</script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -16,6 +17,8 @@
   <div class="topbar">
     <span class="topbar-title">Kayıt Listesi</span>
     <div class="topbar-spacer"></div>
+    <button class="btn btn-ghost btn-sm" onclick="excelAktar()">⬇ Excel'e Aktar</button>
+    <button class="btn btn-ghost btn-sm" onclick="icerAktarAc()">⬆ İçe Aktar</button>
     <button class="btn btn-primary" onclick="location.href='form.html'">+ Yeni Kayıt</button>
   </div>
 
@@ -90,6 +93,43 @@
   </div>
 </div>
 
+<!-- İçe Aktarma Modalı -->
+<div id="import-modal" class="modal-overlay" style="display:none" onclick="icerAktarKapat()">
+  <div class="modal-kutu" style="width:620px;max-width:95vw" onclick="event.stopPropagation()">
+    <div class="modal-baslik">Excel'den İçe Aktar</div>
+
+    <div id="import-adim-1">
+      <p style="color:var(--text2);font-size:13px;margin-bottom:16px">
+        Excel dosyasını seçin. ID sütunu varsa mevcut kayıtlar güncellenir, yoksa yeni kayıt eklenir.
+      </p>
+      <div id="import-drop" class="import-drop">
+        <div style="font-size:36px;margin-bottom:8px">📂</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">Dosya seçin veya buraya sürükleyin</div>
+        <div style="font-size:12px;color:var(--text2)">.xlsx · .xls · .csv</div>
+        <input type="file" id="import-dosya" accept=".xlsx,.xls,.csv" style="display:none" onchange="dosyaSecildi(this.files[0])">
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:16px">
+        <button class="btn btn-ghost" onclick="icerAktarKapat()">İptal</button>
+      </div>
+    </div>
+
+    <div id="import-adim-2" style="display:none">
+      <div id="import-onizleme"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+        <button class="btn btn-ghost" onclick="icerAktarKapat()">İptal</button>
+        <button class="btn btn-primary" id="import-onayla-btn">İçe Aktar</button>
+      </div>
+    </div>
+
+    <div id="import-adim-3" style="display:none">
+      <div id="import-sonuc"></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:16px">
+        <button class="btn btn-primary" onclick="icerAktarKapat()">Tamam</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 document.getElementById('sayfa-css').textContent += `
   .istatistik-grid {
@@ -131,6 +171,25 @@ document.getElementById('sayfa-css').textContent += `
     border-radius: 14px; padding: 28px; width: 380px; max-width: 90vw;
   }
   .modal-baslik { font-size: 16px; font-weight: 700; margin-bottom: 10px; }
+
+  .import-drop {
+    border: 2px dashed var(--border); border-radius: var(--radius);
+    padding: 36px; text-align: center; cursor: pointer;
+    transition: border-color .2s, background .2s;
+  }
+  .import-drop:hover, .import-drop.drag-over {
+    border-color: var(--accent); background: var(--bg3);
+  }
+  .import-tablo { width:100%; border-collapse:collapse; font-size:12px; margin-top:10px; }
+  .import-tablo th {
+    background:var(--bg3); padding:6px 10px; text-align:left;
+    font-size:10px; font-weight:700; color:var(--text2); text-transform:uppercase;
+    white-space:nowrap;
+  }
+  .import-tablo td {
+    padding:5px 10px; border-bottom:1px solid var(--border);
+    white-space:nowrap; max-width:140px; overflow:hidden; text-overflow:ellipsis;
+  }
 `;
 
 let silinecekId = null;
@@ -252,6 +311,180 @@ document.getElementById('aktif-filtre').addEventListener('change', tabloRenderEt
 document.getElementById('siralama').addEventListener('change', tabloRenderEt);
 
 tabloRenderEt();
+
+// ── Excel Export ──────────────────────────────
+function excelAktar() {
+  const kayitlar = tumKayitlariGetir();
+  if (!kayitlar.length) { alert('Dışa aktarılacak kayıt yok.'); return; }
+
+  const veri = kayitlar.map(k => ({
+    'ID': k.id,
+    'Tür': k.tur,
+    'Ad': k.ad,
+    'Sorumlu': k.sorumlu || '',
+    'Başlangıç Tarihi': k.gelistirmeBaslangic || '',
+    'Bitiş Tarihi': k.gelistirmeBitis || '',
+    'Başlangıç TRL': k.baslangicTRL,
+    'Güncel TRL': k.guncelTRL || '',
+    'Hedeflenen TRL': k.hedeflenenTRL,
+    'Bütçe (₺)': k.butce || 0,
+    'İşçilik': k.iscilik || '',
+    'Teknoloji Alanı': k.teknolojiAlani || '',
+    'Ürün Grubu': k.urunGrubu || '',
+    'Durumu': k.durumu || '',
+    'Faaliyet Planı': k.faaliyetPlani || '',
+    'Aktif': k.aktif !== false ? 'Evet' : 'Hayır'
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(veri);
+  ws['!cols'] = [
+    {wch:10},{wch:12},{wch:32},{wch:20},{wch:16},{wch:16},
+    {wch:14},{wch:12},{wch:14},{wch:14},{wch:20},
+    {wch:18},{wch:18},{wch:16},{wch:18},{wch:8}
+  ];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Kayıtlar');
+  XLSX.writeFile(wb, `teknoloji-vt-${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+// ── Excel Import ──────────────────────────────
+let importSatirlar = [];
+
+function icerAktarAc() {
+  importSatirlar = [];
+  document.getElementById('import-adim-1').style.display = 'block';
+  document.getElementById('import-adim-2').style.display = 'none';
+  document.getElementById('import-adim-3').style.display = 'none';
+  document.getElementById('import-dosya').value = '';
+  document.getElementById('import-modal').style.display = 'flex';
+}
+
+function icerAktarKapat() {
+  document.getElementById('import-modal').style.display = 'none';
+  tabloRenderEt();
+}
+
+const importDrop = document.getElementById('import-drop');
+importDrop.addEventListener('click', () => document.getElementById('import-dosya').click());
+importDrop.addEventListener('dragover', e => { e.preventDefault(); importDrop.classList.add('drag-over'); });
+importDrop.addEventListener('dragleave', () => importDrop.classList.remove('drag-over'));
+importDrop.addEventListener('drop', e => {
+  e.preventDefault();
+  importDrop.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) dosyaSecildi(e.dataTransfer.files[0]);
+});
+
+function dosyaSecildi(dosya) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array', cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      importSatirlar = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      if (!importSatirlar.length) { alert('Dosyada veri bulunamadı.'); return; }
+      onizlemeGoster();
+    } catch(err) { alert('Dosya okunamadı: ' + err.message); }
+  };
+  reader.readAsArrayBuffer(dosya);
+}
+
+function onizlemeGoster() {
+  const ilk5 = importSatirlar.slice(0, 5);
+  const sutunlar = Object.keys(ilk5[0] || {});
+  const guncellenenSayisi = importSatirlar.filter(s => s['ID'] && idIleGetir(String(s['ID']))).length;
+
+  document.getElementById('import-onizleme').innerHTML = `
+    <div style="color:var(--text2);font-size:13px;margin-bottom:12px">
+      Toplam <strong style="color:var(--text)">${importSatirlar.length}</strong> satır bulundu.
+      ${guncellenenSayisi > 0
+        ? `<span style="color:var(--warning)"> · ${guncellenenSayisi} mevcut kayıt güncellenecek.</span>`
+        : ''}
+    </div>
+    <div style="overflow-x:auto">
+      <table class="import-tablo">
+        <thead><tr>${sutunlar.map(s => `<th>${s}</th>`).join('')}</tr></thead>
+        <tbody>${ilk5.map(satir =>
+          `<tr>${sutunlar.map(s => `<td title="${satir[s]}">${satir[s]}</td>`).join('')}</tr>`
+        ).join('')}</tbody>
+      </table>
+    </div>
+    ${importSatirlar.length > 5 ? `<p style="color:var(--text2);font-size:12px;margin-top:6px">… ve ${importSatirlar.length - 5} satır daha</p>` : ''}
+  `;
+  document.getElementById('import-adim-1').style.display = 'none';
+  document.getElementById('import-adim-2').style.display = 'block';
+  document.getElementById('import-onayla-btn').onclick = kayitlariIcerAktar;
+}
+
+function formatImportTarih(deger) {
+  if (!deger) return '';
+  if (deger instanceof Date) return deger.toISOString().slice(0, 10);
+  const s = String(deger).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const p = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (p) return `${p[3]}-${p[2].padStart(2,'0')}-${p[1].padStart(2,'0')}`;
+  return s;
+}
+
+function kayitlariIcerAktar() {
+  let eklenen = 0, guncellenen = 0, hatali = 0;
+
+  importSatirlar.forEach(satir => {
+    const ad = String(satir['Ad'] || '').trim();
+    if (!ad) { hatali++; return; }
+
+    const veri = {
+      tur:                 String(satir['Tür'] || 'Teknoloji'),
+      ad,
+      sorumlu:             String(satir['Sorumlu'] || ''),
+      gelistirmeBaslangic: formatImportTarih(satir['Başlangıç Tarihi']),
+      gelistirmeBitis:     formatImportTarih(satir['Bitiş Tarihi']),
+      baslangicTRL:        parseInt(satir['Başlangıç TRL']) || 1,
+      guncelTRL:           satir['Güncel TRL'] ? parseInt(satir['Güncel TRL']) : null,
+      hedeflenenTRL:       parseInt(satir['Hedeflenen TRL']) || 9,
+      butce:               parseFloat(satir['Bütçe (₺)']) || 0,
+      iscilik:             String(satir['İşçilik'] || ''),
+      teknolojiAlani:      String(satir['Teknoloji Alanı'] || ''),
+      urunGrubu:           String(satir['Ürün Grubu'] || ''),
+      durumu:              String(satir['Durumu'] || ''),
+      faaliyetPlani:       String(satir['Faaliyet Planı'] || ''),
+      aktif:               String(satir['Aktif']).toLowerCase() !== 'hayır',
+      trlHedefleri:        [],
+      iliskiler:           []
+    };
+
+    const mevcutId = String(satir['ID'] || '').trim();
+    if (mevcutId && idIleGetir(mevcutId)) {
+      kayitGuncelle(mevcutId, veri);
+      guncellenen++;
+    } else {
+      kayitEkle(veri);
+      eklenen++;
+    }
+  });
+
+  document.getElementById('import-adim-2').style.display = 'none';
+  document.getElementById('import-adim-3').style.display = 'block';
+  document.getElementById('import-sonuc').innerHTML = `
+    <div style="text-align:center;padding:8px 0">
+      <div style="font-size:36px;margin-bottom:10px">✅</div>
+      <div style="font-size:15px;font-weight:700;margin-bottom:20px">İçe Aktarma Tamamlandı</div>
+      <div style="display:flex;gap:24px;justify-content:center">
+        <div>
+          <div style="font-size:26px;font-weight:700;color:var(--success)">${eklenen}</div>
+          <div style="font-size:11px;color:var(--text2);text-transform:uppercase;margin-top:2px">Yeni Eklendi</div>
+        </div>
+        <div>
+          <div style="font-size:26px;font-weight:700;color:var(--warning)">${guncellenen}</div>
+          <div style="font-size:11px;color:var(--text2);text-transform:uppercase;margin-top:2px">Güncellendi</div>
+        </div>
+        ${hatali > 0 ? `<div>
+          <div style="font-size:26px;font-weight:700;color:var(--danger)">${hatali}</div>
+          <div style="font-size:11px;color:var(--text2);text-transform:uppercase;margin-top:2px">Atlandı</div>
+        </div>` : ''}
+      </div>
+    </div>
+  `;
+}
 </script>
 </body>
 </html>
