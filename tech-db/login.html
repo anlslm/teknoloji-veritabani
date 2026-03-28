@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Giriş — Teknoloji Veritabanı</title>
+  <script src="app.js"></script>
+  <style id="sayfa-css"></style>
+  <script>document.getElementById('sayfa-css').textContent = ortakCSS() + `
+    body { align-items: center; justify-content: center; }
+    .login-wrap { width: 380px; max-width: 92vw; }
+    .login-logo { text-align: center; margin-bottom: 32px; }
+    .login-ikon { font-size: 42px; margin-bottom: 12px; }
+    .login-baslik { font-size: 22px; font-weight: 700; }
+    .login-alt { font-size: 13px; color: var(--text2); margin-top: 4px; }
+    .varsayilan-not {
+      margin-top: 14px; padding: 10px 14px;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); font-size: 12px; color: var(--text2);
+      line-height: 1.7;
+    }
+    .varsayilan-not code {
+      background: var(--bg3); padding: 1px 6px; border-radius: 4px;
+      color: var(--accent); font-size: 11px; font-family: monospace;
+    }
+  `;</script>
+</head>
+<body>
+
+<script>
+// Zaten giriş yapılmışsa yönlendir
+const _o = JSON.parse(sessionStorage.getItem('techdb_oturum') || 'null');
+if (_o) location.replace('index.html');
+</script>
+
+<div class="login-wrap">
+  <div class="login-logo">
+    <div class="login-ikon">🔐</div>
+    <div class="login-baslik">Teknoloji <span style="color:var(--accent)">Veritabanı</span></div>
+    <div class="login-alt">Sisteme erişmek için giriş yapın</div>
+  </div>
+
+  <div class="card">
+    <div id="hata" class="alert alert-danger" style="display:none;margin-bottom:16px"></div>
+
+    <div class="form-group">
+      <label class="form-label">Kullanıcı Adı</label>
+      <input type="text" id="kullanici-adi" class="form-control"
+             placeholder="Kullanıcı adınız" autocomplete="username" autofocus
+             onkeydown="if(event.key==='Enter')document.getElementById('sifre').focus()">
+    </div>
+
+    <div class="form-group" style="margin-bottom:24px">
+      <label class="form-label">Şifre</label>
+      <input type="password" id="sifre" class="form-control"
+             placeholder="Şifreniz" autocomplete="current-password"
+             onkeydown="if(event.key==='Enter')girisYap()">
+    </div>
+
+    <button class="btn btn-primary" style="width:100%" onclick="girisYap()">Giriş Yap →</button>
+  </div>
+
+  <div class="varsayilan-not">
+    Varsayılan hesaplar:<br>
+    <code>admin</code> / <code>admin123</code> — Yönetici<br>
+    <code>tys</code> / <code>tys123</code> — TYS<br>
+    <code>kullanici</code> / <code>kullanici123</code> — Kullanıcı
+  </div>
+</div>
+
+<script>
+function girisYap() {
+  const ad   = document.getElementById('kullanici-adi').value.trim();
+  const sif  = document.getElementById('sifre').value;
+  const hataEl = document.getElementById('hata');
+
+  if (!ad || !sif) {
+    hataEl.textContent = 'Kullanıcı adı ve şifre zorunludur.';
+    hataEl.style.display = 'block';
+    return;
+  }
+
+  const kullanici = kullaniciDogrula(ad, sif);
+  if (!kullanici) {
+    hataEl.textContent = 'Kullanıcı adı veya şifre hatalı.';
+    hataEl.style.display = 'block';
+    document.getElementById('sifre').value = '';
+    document.getElementById('sifre').focus();
+    return;
+  }
+
+  oturumAc(kullanici);
+  location.href = 'index.html';
+}
+</script>
+</body>
+</html>

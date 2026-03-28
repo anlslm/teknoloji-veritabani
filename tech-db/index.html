@@ -11,6 +11,7 @@
 </head>
 <body>
 
+<script>sayfaKoruma('kullanici');</script>
 <script>document.body.insertAdjacentHTML('afterbegin', sidebarHTML('index.html'));</script>
 
 <div class="main-wrap">
@@ -18,8 +19,8 @@
     <span class="topbar-title">Kayıt Listesi</span>
     <div class="topbar-spacer"></div>
     <button class="btn btn-ghost btn-sm" onclick="excelAktar()">⬇ Excel'e Aktar</button>
-    <button class="btn btn-ghost btn-sm" onclick="icerAktarAc()">⬆ İçe Aktar</button>
-    <button class="btn btn-primary" onclick="location.href='form.html'">+ Yeni Kayıt</button>
+    <button class="btn btn-ghost btn-sm" id="btn-iceraktar" onclick="icerAktarAc()">⬆ İçe Aktar</button>
+    <button class="btn btn-primary" id="btn-yeni" onclick="location.href='form.html'">+ Yeni Kayıt</button>
   </div>
 
   <main style="max-width:1200px;margin:0 auto;padding:28px 24px">
@@ -219,6 +220,8 @@ function tabloRenderEt() {
   const turF   = document.getElementById('tur-filtre').value;
   const siraF  = document.getElementById('siralama').value;
   let kayitlar = tumKayitlariGetir();
+  const _ak  = aktifKullanici();
+  const _rSev = _ak ? (ROL_SIRASI[_ak.rol] || 0) : 0;
 
   istatistikleriRenderEt(kayitlar);
 
@@ -259,6 +262,8 @@ function tabloRenderEt() {
     const trlRenk = k.baslangicTRL <= 3 ? '#e94560' : k.baslangicTRL <= 6 ? '#f7a44f' : '#4fd97f';
     const iliskiSayisi = (k.iliskiler || []).length;
     const pasif = k.aktif === false;
+    const duzenleOk = _rSev >= 3 || (_rSev === 2 && k.olusturanId === _ak?.id);
+    const silOk     = _rSev >= 3;
     return `<tr onclick="location.href='detail.html?id=${k.id}'" title="Detayı görüntüle"
       style="${pasif ? 'opacity:.45;' : ''}">
       <td class="td-id">${k.id}</td>
@@ -280,8 +285,8 @@ function tabloRenderEt() {
       <td onclick="event.stopPropagation()">
         <div class="islem-butonlar">
           <button class="btn btn-ghost btn-sm" onclick="location.href='detail.html?id=${k.id}'">Detay</button>
-          <button class="btn btn-ghost btn-sm" onclick="location.href='form.html?id=${k.id}'">Düzenle</button>
-          <button class="btn btn-danger btn-sm" onclick="silOnay('${k.id}','${k.ad.replace(/'/g,"\\'")}')">Sil</button>
+          ${duzenleOk ? `<button class="btn btn-ghost btn-sm" onclick="location.href='form.html?id=${k.id}'">Düzenle</button>` : ''}
+          ${silOk ? `<button class="btn btn-danger btn-sm" onclick="silOnay('${k.id}','${k.ad.replace(/'/g,"\\'")}')">Sil</button>` : ''}
         </div>
       </td>
     </tr>`;
@@ -311,6 +316,15 @@ document.getElementById('aktif-filtre').addEventListener('change', tabloRenderEt
 document.getElementById('siralama').addEventListener('change', tabloRenderEt);
 
 tabloRenderEt();
+
+// Kullanici rolü için yazma butonlarını gizle
+(function() {
+  const _ak = aktifKullanici();
+  if (_ak && (ROL_SIRASI[_ak.rol] || 0) < 2) {
+    document.getElementById('btn-iceraktar')?.remove();
+    document.getElementById('btn-yeni')?.remove();
+  }
+})();
 
 // ── Excel Export ──────────────────────────────
 function excelAktar() {

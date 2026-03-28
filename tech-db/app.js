@@ -153,6 +153,8 @@ function kayitEkle(veri) {
     trlHedefleri: Array.isArray(veri.trlHedefleri)
       ? veri.trlHedefleri.filter(h => h.hedef && h.tarih)
       : [],
+    olusturanId: (aktifKullanici() || {}).id  || null,
+    olusturanAd: (aktifKullanici() || {}).ad  || null,
     iliskiler: [],
     olusturmaTarihi: simdi,
     guncellenmeTarihi: simdi
@@ -488,6 +490,32 @@ function ortakCSS() {
     .empty-state-text { font-size: 16px; font-weight: 500; margin-bottom: 6px; color: var(--text); }
     .empty-state-sub  { font-size: 13px; }
 
+    /* ── Sidebar Kullanıcı Bloğu ── */
+    .sidebar-user {
+      padding: 14px 14px 16px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .sidebar-user-row {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+    }
+    .sidebar-user-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--accent)30; border: 1px solid var(--accent)50;
+      color: var(--accent); font-size: 13px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .sidebar-user-ad  { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.2; }
+    .sidebar-user-rol { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: .5px; }
+    .sidebar-cikis {
+      width: 100%; padding: 7px 10px; text-align: left;
+      background: none; border: 1px solid var(--border);
+      border-radius: 7px; color: var(--text2); font-size: 12px;
+      cursor: pointer; transition: all .15s; font-family: inherit;
+    }
+    .sidebar-cikis:hover { background: #e9456012; border-color: var(--danger); color: var(--danger); }
+
     /* Scrollbar */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: var(--bg); }
@@ -500,21 +528,42 @@ function ortakCSS() {
 // ──────────────────────────────────────────────
 
 function sidebarHTML(aktifSayfa) {
+  const k      = aktifKullanici();
+  const rol    = k ? k.rol : 'kullanici';
+  const rSev   = ROL_SIRASI[rol] || 0;
+
   const linkler = [
-    { href: 'index.html',   ikon: '📋', etiket: 'Kayıt Listesi' },
-    { href: 'roadmap.html', ikon: '🗺️', etiket: 'Yol Haritası' },
-    { href: 'ddp.html',     ikon: '💼', etiket: 'Dış Destekli Projeler' },
-    { href: 'config.html',  ikon: '⚙️', etiket: 'Konfigürasyon' },
+    { href: 'index.html',   ikon: '📋', etiket: 'Kayıt Listesi',        min: 1 },
+    { href: 'roadmap.html', ikon: '🗺️', etiket: 'Yol Haritası',         min: 1 },
+    { href: 'ddp.html',     ikon: '💼', etiket: 'Dış Destekli Projeler', min: 2 },
+    { href: 'config.html',  ikon: '⚙️', etiket: 'Konfigürasyon',         min: 3 },
   ];
-  const linkHTML = linkler.map(l =>
-    `<a href="${l.href}" class="sidebar-link ${aktifSayfa === l.href ? 'active' : ''}">
+
+  const linkHTML = linkler
+    .filter(l => rSev >= l.min)
+    .map(l => `<a href="${l.href}" class="sidebar-link ${aktifSayfa === l.href ? 'active' : ''}">
       <span class="sl-icon">${l.ikon}</span>${l.etiket}
-    </a>`
-  ).join('');
+    </a>`)
+    .join('');
+
+  const ROL_ETIKET = { yonetici: 'Yönetici', tys: 'TYS', kullanici: 'Kullanıcı' };
+  const kullaniciBlok = k ? `
+    <div class="sidebar-user">
+      <div class="sidebar-user-row">
+        <div class="sidebar-user-avatar">${k.ad.charAt(0).toUpperCase()}</div>
+        <div>
+          <div class="sidebar-user-ad">${k.ad}</div>
+          <div class="sidebar-user-rol">${ROL_ETIKET[rol] || rol}</div>
+        </div>
+      </div>
+      <button class="sidebar-cikis" onclick="oturumKapat()">← Çıkış Yap</button>
+    </div>` : '';
+
   return `
     <div class="sidebar">
       <div class="sidebar-brand">Teknoloji <span>Veritabanı</span></div>
       <nav class="sidebar-nav">${linkHTML}</nav>
+      ${kullaniciBlok}
     </div>
   `;
 }
@@ -594,4 +643,73 @@ function ddpGuncelle(id, veri) {
 
 function ddpSil(id) {
   ddpKayitlariKaydet(ddpKayitlariGetir().filter(k => k.id !== id));
+}
+
+// ══════════════════════════════════════════════
+//  KİMLİK DOĞRULAMA
+// ══════════════════════════════════════════════
+
+const AUTH_KEY    = 'techdb_kullanicilar';
+const SESSION_KEY = 'techdb_oturum';
+const ROL_SIRASI  = { kullanici: 1, tys: 2, yonetici: 3 };
+
+// FNV-1a 32-bit — senkron, hafif hash
+function hash(metin) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < metin.length; i++) {
+    h = Math.imul(h ^ metin.charCodeAt(i), 0x01000193);
+  }
+  return (h >>> 0).toString(16).padStart(8, '0');
+}
+
+const VARSAYILAN_KULLANICILAR = [
+  { id: 'usr-0001', ad: 'Yönetici',      kullaniciAdi: 'admin',     sifreHash: hash('admin123'),      rol: 'yonetici'  },
+  { id: 'usr-0002', ad: 'TYS Kullanıcı', kullaniciAdi: 'tys',       sifreHash: hash('tys123'),        rol: 'tys'       },
+  { id: 'usr-0003', ad: 'Görüntüleyici', kullaniciAdi: 'kullanici',  sifreHash: hash('kullanici123'),  rol: 'kullanici' },
+];
+
+function kullanicilarGetir() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(AUTH_KEY));
+    if (stored && Array.isArray(stored) && stored.length) return stored;
+  } catch {}
+  const liste = JSON.parse(JSON.stringify(VARSAYILAN_KULLANICILAR));
+  localStorage.setItem(AUTH_KEY, JSON.stringify(liste));
+  return liste;
+}
+
+function kullaniciDogrula(kullaniciAdi, sifre) {
+  return kullanicilarGetir().find(k =>
+    k.kullaniciAdi === kullaniciAdi && k.sifreHash === hash(sifre)
+  ) || null;
+}
+
+function oturumAc(kullanici) {
+  const oturum = {
+    id: kullanici.id, ad: kullanici.ad,
+    kullaniciAdi: kullanici.kullaniciAdi, rol: kullanici.rol
+  };
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(oturum));
+  return oturum;
+}
+
+function oturumKapat() {
+  sessionStorage.removeItem(SESSION_KEY);
+  location.href = 'login.html';
+}
+
+function aktifKullanici() {
+  try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)); }
+  catch { return null; }
+}
+
+// minRol: 'kullanici' | 'tys' | 'yonetici'
+// Yetersiz yetkide index.html'e, oturum yoksa login.html'e yönlendirir.
+function sayfaKoruma(minRol) {
+  const k = aktifKullanici();
+  if (!k) { location.replace('login.html'); return null; }
+  if ((ROL_SIRASI[k.rol] || 0) < (ROL_SIRASI[minRol] || 0)) {
+    location.replace('index.html'); return null;
+  }
+  return k;
 }

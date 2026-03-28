@@ -10,6 +10,7 @@
 </head>
 <body>
 
+<script>sayfaKoruma('tys');</script>
 <script>document.body.insertAdjacentHTML('afterbegin', sidebarHTML('index.html'));</script>
 
 <div class="main-wrap">
@@ -614,6 +615,13 @@ function sayfaBaslat() {
     const kayit = idIleGetir(id);
     if (!kayit) {
       alert('Kayıt bulunamadı.');
+      location.href = 'index.html';
+      return;
+    }
+    // TYS sahiplik kontrolü
+    const _fAk = aktifKullanici();
+    if (_fAk?.rol === 'tys' && kayit.olusturanId !== _fAk.id) {
+      alert('Bu kaydı düzenleme yetkiniz yok.');
       location.href = 'index.html';
       return;
     }
